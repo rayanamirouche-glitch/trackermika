@@ -1,0 +1,9 @@
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[functions."snapshot_avis"]
+  schedule = "0 3 * * *"
+
+[functions."snapshot_rank"]
+  schedule = "30 3 * * 1,4"
