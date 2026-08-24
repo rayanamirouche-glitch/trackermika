@@ -18,17 +18,24 @@ async function baseUrl() {
   return m.base || process.env.URL || process.env.DEPLOY_PRIME_URL || '';
 }
 
+const normName = s => (s || '').toLowerCase().replace(/[\u2018\u2019\u02BC\u0060\u00B4]/g, "'").normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 async function resolveIds() {
   const K = process.env.PLACES_API_KEY;
   const ids = await getJSON('ids', {});
   await Promise.all(FICHES.map(async f => {
     if (ids[f.name]) return;
-    try {
-      const u = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=' + encodeURIComponent(f.q + ' ' + REGION) + '&inputtype=textquery&fields=place_id&locationbias=' + encodeURIComponent('circle:6000@' + f.ll) + '&key=' + K;
-      const j = await to(fetch(u).then(r => r.json()), 6000);
-      const c = j && j.candidates && j.candidates[0];
-      if (c && c.place_id) ids[f.name] = c.place_id;
-    } catch (e) {}
+    const t = normName(f.target);
+    const queries = [f.q + ' ' + REGION, f.q, f.name];
+    for (const q of queries) {
+      try {
+        const u = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + encodeURIComponent(q) + '&location=' + f.ll + '&radius=15000&key=' + K;
+        const j = await to(fetch(u).then(r => r.json()), 6500);
+        const results = (j && j.results) || [];
+        const hit = results.find(r => r.name && normName(r.name).includes(t));
+        if (hit && hit.place_id) { ids[f.name] = hit.place_id; break; }
+      } catch (e) {}
+    }
   }));
   await setJSON('ids', ids);
   return ids;
