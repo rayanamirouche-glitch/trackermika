@@ -51,7 +51,7 @@ async function snapAvis() {
       const u = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=' + pid + '&fields=user_ratings_total,rating&key=' + K;
       const j = await to(fetch(u).then(r => r.json()), 6000);
       const res = j && j.result;
-      if (res && typeof res.user_ratings_total === 'number') snap[f.name] = { n: res.user_ratings_total, r: res.rating || null };
+      if (res) snap[f.name] = { n: (typeof res.user_ratings_total === 'number' ? res.user_ratings_total : 0), r: res.rating || null };
     } catch (e) {}
   }));
   const hist = await getJSON('avis', {});
