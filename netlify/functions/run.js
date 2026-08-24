@@ -7,6 +7,9 @@ exports.handler = async (event) => {
   try {
     if (q.type === 'avis') {
       await core.snapAvis();
+    } else if (q.type === 'relink') {
+      await core.relink();
+      await core.snapAvis();
     } else if (q.type === 'rank') {
       const start = parseInt(q.i || '0', 10) || 0;
       if (start === 0 && q.force !== '1') {

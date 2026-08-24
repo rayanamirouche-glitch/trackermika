@@ -24,7 +24,7 @@ async function resolveIds() {
   await Promise.all(FICHES.map(async f => {
     if (ids[f.name]) return;
     try {
-      const u = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=' + encodeURIComponent(f.q + ' ' + REGION) + '&inputtype=textquery&fields=place_id&key=' + K;
+      const u = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=' + encodeURIComponent(f.q + ' ' + REGION) + '&inputtype=textquery&fields=place_id&locationbias=' + encodeURIComponent('circle:6000@' + f.ll) + '&key=' + K;
       const j = await to(fetch(u).then(r => r.json()), 6000);
       const c = j && j.candidates && j.candidates[0];
       if (c && c.place_id) ids[f.name] = c.place_id;
@@ -103,8 +103,13 @@ async function rankHistory() {
   return hist;
 }
 
+async function relink() {
+  await setJSON('ids', {});
+  return resolveIds();
+}
+
 async function allData() {
   return { ids: await getJSON('ids', {}), avis: await getJSON('avis', {}), rank: await rankHistory() };
 }
 
-module.exports = { snapAvis, snapRank, allData, rankCooldown, rememberBase };
+module.exports = { snapAvis, snapRank, allData, rankCooldown, rememberBase, relink };
