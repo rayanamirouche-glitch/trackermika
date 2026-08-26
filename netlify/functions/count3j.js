@@ -1,6 +1,6 @@
 // Compteur J-2 / J-1 / J — lit les avis réels (SerpApi, dates ISO) via les place_id déjà liés
 const FICHES = require('./fiches.json');
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 const store = () => getStore('tracker');
 async function getJSON(k, d) { try { const v = await store().get(k, { type: 'json' }); return (v === null || v === undefined) ? d : v } catch (e) { return d } }
 
@@ -31,6 +31,7 @@ async function countRecent(placeId, buckets, cutoff) {
 }
 
 exports.handler = async (event) => {
+  connectLambda(event);
   const p = event.queryStringParameters || {};
   const start = parseInt(p.start || '0', 10);
   const n = parseInt(p.n || '3', 10);
