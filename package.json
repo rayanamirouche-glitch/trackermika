@@ -1,6 +1,6 @@
 {
-  "name": "tracker-gbp",
-  "private": true,
+  "name": "tracker-toiture-belgique",
+  "version": "3.0.0",
   "dependencies": {
     "@netlify/blobs": "^7.4.0"
   }

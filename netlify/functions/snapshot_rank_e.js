@@ -2,6 +2,6 @@ const { connectLambda } = require('@netlify/blobs');
 const core = require('./core');
 exports.handler = async (event) => {
   connectLambda(event);
-  await core.snapRank(0, process.env.URL);
+  await core.snapRank(40, process.env.URL);
   return { statusCode: 200 };
 };

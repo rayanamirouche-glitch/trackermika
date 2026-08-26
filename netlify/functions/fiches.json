@@ -1,1 +1,252 @@
-[{"name": "Express Clean Clim 77", "q": "express clean clim 77 melun", "kw": "climatisation melun", "target": "express clean", "ll": "48.5280,2.6810"}, {"name": "Master Pro Clim Versailles", "q": "master pro clim versailles", "kw": "climatisation versailles", "target": "master pro", "ll": "48.8010,2.1300"}, {"name": "Le Maître du Froid Clim Paris", "q": "le maître du froid clim paris", "kw": "climatisation paris", "target": "maître du froid", "ll": "48.8570,2.3520"}, {"name": "Fresh et Air Clim (Évry)", "q": "fresh et air clim évry courcouronnes", "kw": "climatisation évry", "target": "fresh et air", "ll": "48.6290,2.4410"}, {"name": "Clim and Chill 91 (Évry)", "q": "clim and chill 91 climatisation évry", "kw": "climatisation évry", "target": "clim and chill", "ll": "48.6290,2.4410"}, {"name": "Chrome Climatisation Créteil", "q": "chrome climatisation créteil", "kw": "climatisation créteil", "target": "chrome", "ll": "48.7900,2.4550"}, {"name": "Le Roi de la Clim 94 Créteil", "q": "le roi de la clim 94 créteil", "kw": "climatisation créteil", "target": "roi de la clim", "ll": "48.7900,2.4550"}, {"name": "Climkeeper Nanterre", "q": "climkeeper nanterre climatisation", "kw": "climatisation nanterre", "target": "climkeeper", "ll": "48.8920,2.2070"}, {"name": "Clim 95 (Cergy)", "q": "clim 95 entretien pose réparation cergy", "kw": "climatisation cergy", "target": "clim 95", "ll": "49.0360,2.0630"}, {"name": "Boisement Best of Clim", "q": "boisement best of clim boisemont", "kw": "climatisation cergy", "target": "boisement", "ll": "49.0230,2.0000"}, {"name": "La Climique de Bobigny", "q": "la climique de bobigny climatisation", "kw": "climatisation bobigny", "target": "climique", "ll": "48.9060,2.4390"}, {"name": "Sofamega Paris 8ème", "q": "sofamega climatisation paris 8ème", "kw": "climatisation paris 8", "target": "sofamega", "ll": "48.8720,2.3140"}, {"name": "Nouvelle Ère Paris 15ème", "q": "nouvelle ère climatisation paris 15ème", "kw": "climatisation paris 15", "target": "nouvelle ère", "ll": "48.8420,2.2930"}, {"name": "PAC Clim Paris 8", "q": "pac clim paris 8 climatisation", "kw": "climatisation paris 8", "target": "pac clim", "ll": "48.8720,2.3140"}, {"name": "PAC CLIM Cergy", "q": "pac clim cergy climatisation", "kw": "climatisation cergy", "target": "pac clim", "ll": "49.0360,2.0630"}, {"name": "Clim Paris 15", "q": "clim paris 15 climatisation", "kw": "climatisation paris 15", "target": "clim paris 15", "ll": "48.8420,2.2930"}, {"name": "Firstclass Clim · PAC 1€", "q": "firstclass clim pac 1 euro", "kw": "pompe à chaleur paris", "target": "firstclass", "ll": "48.8570,2.3520"}, {"name": "La Spécialiste Clim · PAC 1€ (94)", "q": "la spécialiste clim pompe à chaleur 1 euro val de marne", "kw": "pompe à chaleur créteil", "target": "spécialiste clim", "ll": "48.7900,2.4550"}, {"name": "Ma PAC à 1€ Livry-Gargan", "q": "ma pac a 1 euro livry gargan", "kw": "pompe à chaleur livry-gargan", "target": "ma pac", "ll": "48.9190,2.5430"}, {"name": "PAC Chelles à partir de 1€", "q": "pac chelles a partir de 1 euro", "kw": "pompe à chaleur chelles", "target": "pac chelles", "ll": "48.8830,2.5930"}, {"name": "Sartrouville Pro des PAC · 1€", "q": "sartrouville professionnel des pompes à chaleur", "kw": "pompe à chaleur sartrouville", "target": "professionnel des pompes", "ll": "48.9380,2.1640"}, {"name": "Master Clim Nogent-sur-Oise · PAC 1€", "q": "nogent sur oise master clim dépannage pose pac", "kw": "pompe à chaleur nogent-sur-oise", "target": "master clim", "ll": "49.2740,2.4710"}, {"name": "L'Atelier Flash · PAC 1€ Pontault", "q": "l'atelier flash pac 1 euro pontault combault", "kw": "pompe à chaleur pontault-combault", "target": "atelier flash", "ll": "48.7970,2.6070"}, {"name": "Thermo Pro · PAC 1€ (94)", "q": "thermo pro pac 1 euro val de marne", "kw": "pompe à chaleur créteil", "target": "thermo pro", "ll": "48.7900,2.4550"}, {"name": "Perfect Clim 95 · 1€ PAC", "q": "1 euro pac perfect clim 95 cergy", "kw": "pompe à chaleur cergy", "target": "perfect clim", "ll": "49.0360,2.0630"}]
+[
+ {
+  "name": "Express clean Clim 77",
+  "q": "Express clean Clim 77",
+  "target": "express clean clim",
+  "ll": "48.529,2.681",
+  "kw": "climatisation melun",
+  "city": "77",
+  "link": "https://maps.app.goo.gl/tXgXaUGNZo2pxFL87",
+  "region": "IDF"
+ },
+ {
+  "name": "Master pro Clim Versailles",
+  "q": "Master pro Clim Versailles",
+  "target": "master pro clim",
+  "ll": "48.804,2.130",
+  "kw": "climatisation versailles",
+  "city": "Versailles",
+  "link": "https://maps.app.goo.gl/5PN8XVvU86NzCNgc7",
+  "region": "IDF"
+ },
+ {
+  "name": "Le maître du froid Clim Paris",
+  "q": "Le maître du froid Clim Paris",
+  "target": "le maitre du",
+  "ll": "48.860,2.347",
+  "kw": "climatisation paris",
+  "city": "Paris",
+  "link": "https://maps.app.goo.gl/gBjSeFkr3pkZ1FhE7",
+  "region": "IDF"
+ },
+ {
+  "name": "Fresh et Air clim",
+  "q": "Fresh et Air clim",
+  "target": "fresh et air",
+  "ll": "48.630,2.440",
+  "kw": "climatisation evry",
+  "city": "Évry",
+  "link": "https://maps.app.goo.gl/PVep4uXoRZmBPyYUA",
+  "region": "IDF"
+ },
+ {
+  "name": "Clim and chill 91 professionnel de la climatisation",
+  "q": "Clim and chill 91 professionnel de la climatisation",
+  "target": "clim and chill",
+  "ll": "48.630,2.440",
+  "kw": "climatisation evry",
+  "city": "Évry",
+  "link": "https://maps.app.goo.gl/KAsFzVtywesFz7ZE9",
+  "region": "IDF"
+ },
+ {
+  "name": "Chrome climatisation créteil",
+  "q": "Chrome climatisation créteil",
+  "target": "chrome climatisation creteil",
+  "ll": "48.790,2.455",
+  "kw": "climatisation creteil",
+  "city": "Créteil",
+  "link": "https://maps.app.goo.gl/X8heS9iJvCEdyQhi7",
+  "region": "IDF"
+ },
+ {
+  "name": "Le roi de la clim 94 créteil",
+  "q": "Le roi de la clim 94 créteil",
+  "target": "le roi de",
+  "ll": "48.790,2.455",
+  "kw": "climatisation creteil",
+  "city": "Créteil",
+  "link": "https://maps.app.goo.gl/ooXjtyz3BzqryMdN6",
+  "region": "IDF"
+ },
+ {
+  "name": "Climkeeper nanterre",
+  "q": "Climkeeper nanterre",
+  "target": "climkeeper nanterre",
+  "ll": "48.892,2.206",
+  "kw": "climatisation nanterre",
+  "city": "Nanterre",
+  "link": "https://maps.app.goo.gl/rujJQk8spoBjm4458",
+  "region": "IDF"
+ },
+ {
+  "name": "Clim 95 entretien pose et réparation",
+  "q": "Clim 95 entretien pose et réparation",
+  "target": "clim 95 entretien",
+  "ll": "49.036,2.076",
+  "kw": "climatisation cergy",
+  "city": "Cergy",
+  "link": "https://maps.app.goo.gl/cgX9aGXxtJ4chN3V9",
+  "region": "IDF"
+ },
+ {
+  "name": "boisement best of Clim",
+  "q": "boisement best of Clim",
+  "target": "boisement best of",
+  "ll": "49.031,2.003",
+  "kw": "climatisation cergy",
+  "city": "Boisemont",
+  "link": "https://maps.app.goo.gl/tMohwGePxVVKZEd9A",
+  "region": "IDF"
+ },
+ {
+  "name": "La climique de bobigny",
+  "q": "La climique de bobigny",
+  "target": "la climique de",
+  "ll": "48.906,2.439",
+  "kw": "climatisation bobigny",
+  "city": "Bobigny",
+  "link": "https://maps.app.goo.gl/3xN9GuoWBq6vuvjL7",
+  "region": "IDF"
+ },
+ {
+  "name": "Paris 8ème sofamega climatisation",
+  "q": "Paris 8ème sofamega climatisation",
+  "target": "paris 8eme sofamega",
+  "ll": "48.875,2.312",
+  "kw": "climatisation paris 8",
+  "city": "Paris 8",
+  "link": "https://maps.app.goo.gl/jRNpacqSYybGN1UP8",
+  "region": "IDF"
+ },
+ {
+  "name": "Nouvelle ère climatisation Paris 15eme",
+  "q": "Nouvelle ère climatisation Paris 15eme",
+  "target": "nouvelle ere climatisation",
+  "ll": "48.842,2.293",
+  "kw": "climatisation paris 15",
+  "city": "Paris 15",
+  "link": "https://maps.app.goo.gl/Uc4QaKsS2idbYqmf8",
+  "region": "IDF"
+ },
+ {
+  "name": "PAC Clim Paris 8",
+  "q": "PAC Clim Paris 8",
+  "target": "pac clim paris",
+  "ll": "48.875,2.312",
+  "kw": "pompe a chaleur paris",
+  "city": "Paris 8",
+  "link": "https://maps.app.goo.gl/i6ohzLen99CK2FwD7",
+  "region": "IDF"
+ },
+ {
+  "name": "PAC CLIM Cergy",
+  "q": "PAC CLIM Cergy",
+  "target": "pac clim cergy",
+  "ll": "49.036,2.076",
+  "kw": "pompe a chaleur cergy",
+  "city": "Cergy",
+  "link": "https://maps.app.goo.gl/U7qWVfjuaPUWjPXX7",
+  "region": "IDF"
+ },
+ {
+  "name": "Clim Paris 15",
+  "q": "Clim Paris 15",
+  "target": "clim paris 15",
+  "ll": "48.842,2.293",
+  "kw": "climatisation paris 15",
+  "city": "Paris 15",
+  "link": "https://maps.app.goo.gl/Ea5PQMBpq6mwKB3P9",
+  "region": "IDF"
+ },
+ {
+  "name": "Firstclass clim",
+  "q": "Firstclass clim",
+  "target": "firstclass clim",
+  "ll": "48.860,2.347",
+  "kw": "pompe a chaleur paris",
+  "city": "Paris",
+  "link": "https://maps.app.goo.gl/pgMSRVPnzEanjhRe8",
+  "region": "IDF"
+ },
+ {
+  "name": "La spécialiste Clim : Pompe à chaleur 1 euro val de marne",
+  "q": "La spécialiste Clim : Pompe à chaleur 1 euro val de marne",
+  "target": "la specialiste clim",
+  "ll": "48.790,2.455",
+  "kw": "pompe a chaleur creteil",
+  "city": "Val-de-Marne",
+  "link": "https://maps.app.goo.gl/ZECtTNNE181TsmKL6",
+  "region": "IDF"
+ },
+ {
+  "name": "Ma pac a 1 livry gargan",
+  "q": "Ma pac a 1 livry gargan",
+  "target": "ma pac a",
+  "ll": "48.919,2.535",
+  "kw": "pompe a chaleur livry gargan",
+  "city": "Livry-Gargan",
+  "link": "https://maps.app.goo.gl/7qRPzRxA7tB4awE4A",
+  "region": "IDF"
+ },
+ {
+  "name": "PAC chelles a partir de 1e",
+  "q": "PAC chelles a partir de 1e",
+  "target": "pac chelles a",
+  "ll": "48.883,2.590",
+  "kw": "pompe a chaleur chelles",
+  "city": "Chelles",
+  "link": "https://maps.app.goo.gl/kHQM2ToLA9drKoTGA",
+  "region": "IDF"
+ },
+ {
+  "name": "Sartrouville professionnel des pompes à chaleur",
+  "q": "Sartrouville professionnel des pompes à chaleur",
+  "target": "sartrouville professionnel des",
+  "ll": "48.938,2.164",
+  "kw": "pompe a chaleur sartrouville",
+  "city": "Sartrouville",
+  "link": "https://maps.app.goo.gl/GemtM1XyC8Er8T2K9",
+  "region": "IDF"
+ },
+ {
+  "name": "Nogent sur Oise master Clim dépannage et pose",
+  "q": "Nogent sur Oise master Clim dépannage et pose",
+  "target": "nogent sur oise",
+  "ll": "49.271,2.470",
+  "kw": "climatisation nogent sur oise",
+  "city": "Nogent/Oise",
+  "link": "https://maps.app.goo.gl/2ehTGSa9en6PpGyTA",
+  "region": "IDF"
+ },
+ {
+  "name": "Latelier flash pac 1 pontault",
+  "q": "Latelier flash pac 1 pontault",
+  "target": "latelier flash pac",
+  "ll": "48.798,2.605",
+  "kw": "pompe a chaleur pontault combault",
+  "city": "Pontault",
+  "link": "https://maps.app.goo.gl/ukw2Xs9hUVrU4PM49",
+  "region": "IDF"
+ },
+ {
+  "name": "Thermo pro : PAC 1 euro 94",
+  "q": "Thermo pro : PAC 1 euro 94",
+  "target": "thermo pro :",
+  "ll": "48.790,2.455",
+  "kw": "pompe a chaleur creteil",
+  "city": "Val-de-Marne",
+  "link": "https://maps.app.goo.gl/SYS3S9YUZRSV3X8e6",
+  "region": "IDF"
+ },
+ {
+  "name": "1euro PAC Perfect Clim 95",
+  "q": "1euro PAC Perfect Clim 95",
+  "target": "1euro pac perfect",
+  "ll": "49.036,2.076",
+  "kw": "pompe a chaleur cergy",
+  "city": "Cergy",
+  "link": "https://maps.app.goo.gl/sRRK1uam1uMrYGFE6",
+  "region": "IDF"
+ }
+]

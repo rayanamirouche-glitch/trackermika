@@ -1,24 +1,32 @@
-const { getStore } = require('@netlify/blobs');
 const FICHES = require('./fiches.json');
-const REGION = require('./region.json').region;
+const REGION = 'IDF';
+const { getStore } = require('@netlify/blobs');
 
 const store = () => getStore('tracker');
 const today = () => new Date().toISOString().slice(0, 10);
-const to = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
+const to = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 
-async function getJSON(k, d) { try { const v = await store().get(k, { type: 'json' }); return v ?? d } catch (e) { return d } }
+async function getJSON(k, d) { try { const v = await store().get(k, { type: 'json' }); return (v === null || v === undefined) ? d : v } catch (e) { return d } }
 async function setJSON(k, v) { await store().setJSON(k, v) }
 
-async function rememberBase(base) {
-  if (!base) return;
-  try { const m = await getJSON('siteBase', {}); if (m.base !== base) await setJSON('siteBase', { base }); } catch (e) {}
-}
-async function baseUrl() {
-  const m = await getJSON('siteBase', {});
-  return m.base || process.env.URL || process.env.DEPLOY_PRIME_URL || '';
-}
+const normName = s => (s || '').toLowerCase()
+  .replace(/[\u2018\u2019\u02BC\u0060\u00B4]/g, "'")
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[.\-]/g, ' ')
+  .replace(/\bsaint\b/g, 'st')
+  .replace(/\s+/g, ' ').trim();
 
-const normName = s => (s || '').toLowerCase().replace(/[\u2018\u2019\u02BC\u0060\u00B4]/g, "'").normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+function pickMatch(list, getName, t) {
+  let exact = null, incl = null, exactIdx = -1, inclIdx = -1;
+  list.forEach((r, i) => {
+    const n = normName(getName(r) || '');
+    if (!n) return;
+    if (exact === null && n === t) { exact = r; exactIdx = i; }
+    if (incl === null && n.includes(t)) { incl = r; inclIdx = i; }
+  });
+  return exact ? { hit: exact, idx: exactIdx } : (incl ? { hit: incl, idx: inclIdx } : null);
+}
 
 async function resolveIds() {
   const K = process.env.PLACES_API_KEY;
@@ -26,15 +34,26 @@ async function resolveIds() {
   await Promise.all(FICHES.map(async f => {
     if (ids[f.name]) return;
     const t = normName(f.target);
-    const queries = [f.q + ' ' + REGION, f.q, f.name];
+    const queries = [f.q + ' ' + (f.region || REGION), f.q, f.name];
     for (const q of queries) {
       try {
         const u = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + encodeURIComponent(q) + '&location=' + f.ll + '&radius=15000&key=' + K;
         const j = await to(fetch(u).then(r => r.json()), 6500);
         const results = (j && j.results) || [];
-        const hit = results.find(r => r.name && normName(r.name).includes(t));
-        if (hit && hit.place_id) { ids[f.name] = hit.place_id; break; }
+        const m = pickMatch(results, r => r.name, t);
+        if (m && m.hit.place_id) { ids[f.name] = m.hit.place_id; break; }
       } catch (e) {}
+    }
+    if (!ids[f.name]) {
+      for (const q of [f.name, f.q]) {
+        try {
+          const u = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=' + encodeURIComponent(q) + '&inputtype=textquery&fields=place_id,name&locationbias=' + encodeURIComponent('circle:25000@' + f.ll) + '&key=' + K;
+          const j = await to(fetch(u).then(r => r.json()), 6500);
+          const cands = (j && j.candidates) || [];
+          const m = pickMatch(cands, r => r.name, t);
+          if (m && m.hit.place_id) { ids[f.name] = m.hit.place_id; break; }
+        } catch (e) {}
+      }
     }
   }));
   await setJSON('ids', ids);
@@ -51,12 +70,18 @@ async function snapAvis() {
       const u = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=' + pid + '&fields=user_ratings_total,rating&key=' + K;
       const j = await to(fetch(u).then(r => r.json()), 6000);
       const res = j && j.result;
-      if (res) snap[f.name] = { n: (typeof res.user_ratings_total === 'number' ? res.user_ratings_total : 0), r: res.rating || null };
+      if (res && typeof res.user_ratings_total === 'number') snap[f.name] = { n: res.user_ratings_total, r: res.rating || null };
     } catch (e) {}
   }));
   const hist = await getJSON('avis', {});
   hist[today()] = Object.assign(hist[today()] || {}, snap);
   await setJSON('avis', hist);
+  const base = await getJSON('base', {});
+  let newBase = false;
+  for (const [name, v] of Object.entries(snap)) {
+    if (base[name] == null && v && typeof v.n === 'number') { base[name] = v.n; newBase = true; }
+  }
+  if (newBase) await setJSON('base', base);
   return hist[today()];
 }
 
@@ -67,47 +92,46 @@ async function rankCooldown() {
   const left = COOLDOWN_H * 3600000 - (Date.now() - new Date(meta.last).getTime());
   return left > 0 ? left : 0;
 }
-async function snapRank(start = 0) {
-  const B = 10;
+
+const WAVE = 10;
+async function snapRank(start, baseUrl) {
   const K = process.env.SERPAPI_KEY;
-  const norm = s => (s || '').toLowerCase().replace(/[\u2018\u2019\u02BC\u0060\u00B4]/g, "'").normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  if (start === 0) await setJSON('rankMeta', { last: new Date().toISOString() });
-  const slice = FICHES.slice(start, start + B);
+  start = start || 0;
+  const wave = FICHES.slice(start, start + WAVE);
   const snap = {};
-  await Promise.all(slice.map(async f => {
+  const ids = await getJSON('ids', {});
+  let idsChanged = false;
+  await Promise.all(wave.map(async f => {
     try {
       const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(f.kw) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
-      const j = await to(fetch(u).then(r => r.json()), 8000);
+      const j = await to(fetch(u).then(r => r.json()), 8500);
       const rs = (j && j.local_results) || [];
-      const t = norm(f.target); let pos = null;
-      rs.forEach((r, i) => { if (pos === null && r.title && norm(r.title).includes(t)) pos = i + 1 });
+      const t = normName(f.target); let pos = null;
+      const m = pickMatch(rs, r => r.title, t);
+      if (m) {
+        pos = m.idx + 1;
+        if (!ids[f.name] && m.hit.place_id) { ids[f.name] = m.hit.place_id; idsChanged = true; }
+      }
       snap[f.name] = pos;
-    } catch (e) { snap[f.name] = null }
+    } catch (e) {}
   }));
+  if (idsChanged) await setJSON('ids', ids);
   await setJSON('rankbatch/' + today() + '/' + start, snap);
-  if (start + B < FICHES.length) {
-    const base = await baseUrl();
-    if (base) {
-      const next = base + '/.netlify/functions/run?type=rank&force=1&i=' + (start + B);
-      await Promise.race([fetch(next).catch(() => {}), new Promise(r => setTimeout(r, 3000))]);
-    }
-  }
-  return snap;
+  if (start === 0) await setJSON('rankMeta', { last: new Date().toISOString() });
 }
 
-async function rankHistory() {
-  const hist = await getJSON('rank', {});   // ancien format conservé
+async function rankHist() {
+  const base = await getJSON('rank', {});
   try {
     const { blobs } = await store().list({ prefix: 'rankbatch/' });
-    for (const b of (blobs || [])) {
-      const parts = b.key.split('/');       // rankbatch/DATE/START
+    for (const b of blobs) {
+      const parts = b.key.split('/');
       const date = parts[1];
-      const snap = await getJSON(b.key, {});
-      hist[date] = hist[date] || {};
-      for (const k in snap) { if (snap[k] != null || hist[date][k] == null) hist[date][k] = snap[k] }
+      const w = await getJSON(b.key, {});
+      base[date] = Object.assign(base[date] || {}, w);
     }
   } catch (e) {}
-  return hist;
+  return base;
 }
 
 async function relink() {
@@ -116,7 +140,10 @@ async function relink() {
 }
 
 async function allData() {
-  return { ids: await getJSON('ids', {}), avis: await getJSON('avis', {}), rank: await rankHistory() };
+  const [avis, rank, ids, meta, base] = await Promise.all([
+    getJSON('avis', {}), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {})
+  ]);
+  return { fiches: FICHES, region: REGION, avis, rank, ids, rankMeta: meta, base };
 }
 
-module.exports = { snapAvis, snapRank, allData, rankCooldown, rememberBase, relink };
+module.exports = { snapAvis, snapRank, allData, rankCooldown, relink };
