@@ -60,11 +60,16 @@ async function resolveIds() {
   return ids;
 }
 
-async function snapAvis() {
+const AVIS_WAVE = 12;
+
+// Relevé d'une vague de fiches (start → start+AVIS_WAVE), fusionné dans le snapshot du jour.
+// IMPORTANT : ne fait AUCUNE résolution (c'est le job de relink) — lecture des ids seulement.
+async function snapAvisWave(start) {
   const K = process.env.PLACES_API_KEY;
-  const ids = await resolveIds();
+  const ids = await getJSON('ids', {});
+  const wave = FICHES.slice(start, start + AVIS_WAVE);
   const snap = {};
-  await Promise.all(FICHES.map(async f => {
+  await Promise.all(wave.map(async f => {
     const pid = ids[f.name]; if (!pid) return;
     try {
       const u = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=' + pid + '&fields=user_ratings_total,rating&key=' + K;
@@ -83,6 +88,19 @@ async function snapAvis() {
   }
   if (newBase) await setJSON('base', base);
   return hist[today()];
+}
+
+// Relevé complet : enchaîne les vagues (utilisé par le snapshot nocturne et le bouton).
+// Sans résolution, 25 fiches ≈ 3 vague(s) × ~2 s, ça tient dans le budget.
+async function snapAvis(start) {
+  if (start !== null && start !== undefined && !isNaN(start)) {
+    return snapAvisWave(start);
+  }
+  let last = {};
+  for (let s = 0; s < FICHES.length; s += AVIS_WAVE) {
+    last = await snapAvisWave(s);
+  }
+  return last;
 }
 
 const COOLDOWN_H = 48;
