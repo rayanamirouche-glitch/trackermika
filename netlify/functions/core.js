@@ -60,6 +60,19 @@ async function resolveIds() {
   return ids;
 }
 
+async function avisHist() {
+  const base = await getJSON('avis', {});
+  try {
+    const { blobs } = await store().list({ prefix: 'avisbatch/' });
+    for (const b of blobs) {
+      const date = b.key.split('/')[1];
+      const w = await getJSON(b.key, {});
+      base[date] = Object.assign(base[date] || {}, w);
+    }
+  } catch (e) {}
+  return base;
+}
+
 const AVIS_WAVE = 12;
 
 // Relevé d'une vague de fiches (start → start+AVIS_WAVE), fusionné dans le snapshot du jour.
@@ -67,7 +80,7 @@ const AVIS_WAVE = 12;
 async function snapAvisWave(start) {
   const K = process.env.PLACES_API_KEY;
   const ids = await getJSON('ids', {});
-  const hist = await getJSON('avis', {});
+  const hist = await avisHist();
   const histDates = Object.keys(hist).sort();
   // Derniere valeur connue d'une fiche, quel que soit le jour.
   const lastKnown = name => {
@@ -98,15 +111,17 @@ async function snapAvisWave(start) {
     const prev = lastKnown(f.name);
     if (prev) snap[f.name] = { n: prev.n, r: prev.r || null, stale: true };
   }));
-  hist[today()] = Object.assign(hist[today()] || {}, snap);
-  await setJSON('avis', hist);
+  // Ecriture dans une cle propre a la vague. Deux releves lances en meme temps ne
+  // peuvent plus s'ecraser : avec un blob unique relu-modifie-reecrit, le dernier
+  // ecrivain effacait les fiches de l'autre, d'ou des totaux qui alternaient.
+  await setJSON('avisbatch/' + today() + '/' + start, snap);
   const base = await getJSON('base', {});
   let newBase = false;
   for (const [name, v] of Object.entries(snap)) {
     if (base[name] == null && v && typeof v.n === 'number') { base[name] = v.n; newBase = true; }
   }
   if (newBase) await setJSON('base', base);
-  return hist[today()];
+  return snap;
 }
 
 // Relevé complet : enchaîne les vagues (utilisé par le snapshot nocturne et le bouton).
@@ -178,7 +193,7 @@ async function relink() {
 
 async function allData() {
   const [avis, rank, ids, meta, base] = await Promise.all([
-    getJSON('avis', {}), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {})
+    avisHist(), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {})
   ]);
   // Une fiche retiree de fiches.json laisse son historique derriere elle. On l'ecarte
   // a la lecture, sinon elle continue de gonfler les totaux et les courbes.
