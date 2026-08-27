@@ -85,9 +85,10 @@ async function snapAvisWave(start) {
     for (const ms of [7000, 9000]) {
       try {
         const j = await to(fetch(u).then(r => r.json()), ms);
-        const res = j && j.result;
-        if (res && typeof res.user_ratings_total === 'number') {
-          snap[f.name] = { n: res.user_ratings_total, r: res.rating || null };
+        // Google omet user_ratings_total quand la fiche n'a aucun avis : c'est 0, pas une absence.
+        if (j && j.status === 'OK' && j.result) {
+          const res = j.result;
+          snap[f.name] = { n: typeof res.user_ratings_total === 'number' ? res.user_ratings_total : 0, r: res.rating || null };
           return;
         }
       } catch (e) {}
