@@ -180,8 +180,8 @@
   "region": "IDF"
  },
  {
-  "name": "Ma pac a 1 livry gargan",
-  "q": "Ma pac a 1 livry gargan",
+  "name": "Ma pac a 1€ livry gargan",
+  "q": "Ma pac a 1€ livry gargan",
   "target": "ma pac a",
   "ll": "48.919,2.535",
   "kw": "pompe a chaleur livry gargan",
@@ -220,9 +220,9 @@
   "region": "IDF"
  },
  {
-  "name": "Latelier flash pac 1 pontault",
-  "q": "Latelier flash pac 1 pontault",
-  "target": "latelier flash pac",
+  "name": "L’atelier flash pac 1€ pontault",
+  "q": "L’atelier flash pac 1€ pontault",
+  "target": "l’atelier flash pac",
   "ll": "48.798,2.605",
   "kw": "pompe a chaleur pontault combault",
   "city": "Pontault",
