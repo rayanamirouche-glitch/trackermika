@@ -70,6 +70,13 @@ async function avisHist() {
       base[date] = Object.assign(base[date] || {}, w);
     }
   } catch (e) {}
+  // list() est eventuellement coherent : une vague ecrite il y a quelques secondes
+  // peut en etre absente. Les cles du jour sont donc relues directement.
+  const t = today();
+  for (let s = 0; s < FICHES.length; s += AVIS_WAVE) {
+    const w = await getJSON('avisbatch/' + t + '/' + s, null);
+    if (w) base[t] = Object.assign(base[t] || {}, w);
+  }
   return base;
 }
 
