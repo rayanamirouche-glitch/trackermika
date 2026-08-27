@@ -67,18 +67,36 @@ const AVIS_WAVE = 12;
 async function snapAvisWave(start) {
   const K = process.env.PLACES_API_KEY;
   const ids = await getJSON('ids', {});
+  const hist = await getJSON('avis', {});
+  const histDates = Object.keys(hist).sort();
+  // Derniere valeur connue d'une fiche, quel que soit le jour.
+  const lastKnown = name => {
+    for (let i = histDates.length - 1; i >= 0; i--) {
+      const v = hist[histDates[i]] && hist[histDates[i]][name];
+      if (v && typeof v.n === 'number') return v;
+    }
+    return null;
+  };
   const wave = FICHES.slice(start, start + AVIS_WAVE);
   const snap = {};
   await Promise.all(wave.map(async f => {
     const pid = ids[f.name]; if (!pid) return;
-    try {
-      const u = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=' + pid + '&fields=user_ratings_total,rating&key=' + K;
-      const j = await to(fetch(u).then(r => r.json()), 6000);
-      const res = j && j.result;
-      if (res && typeof res.user_ratings_total === 'number') snap[f.name] = { n: res.user_ratings_total, r: res.rating || null };
-    } catch (e) {}
+    const u = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=' + pid + '&fields=user_ratings_total,rating&key=' + K;
+    for (const ms of [7000, 9000]) {
+      try {
+        const j = await to(fetch(u).then(r => r.json()), ms);
+        const res = j && j.result;
+        if (res && typeof res.user_ratings_total === 'number') {
+          snap[f.name] = { n: res.user_ratings_total, r: res.rating || null };
+          return;
+        }
+      } catch (e) {}
+    }
+    // Google n'a pas repondu : on reconduit la derniere valeur connue, marquee "stale",
+    // pour ne pas creuser un trou dans le releve du jour et fausser le total.
+    const prev = lastKnown(f.name);
+    if (prev) snap[f.name] = { n: prev.n, r: prev.r || null, stale: true };
   }));
-  const hist = await getJSON('avis', {});
   hist[today()] = Object.assign(hist[today()] || {}, snap);
   await setJSON('avis', hist);
   const base = await getJSON('base', {});
