@@ -180,7 +180,19 @@ async function allData() {
   const [avis, rank, ids, meta, base] = await Promise.all([
     getJSON('avis', {}), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {})
   ]);
-  return { fiches: FICHES, region: REGION, avis, rank, ids, rankMeta: meta, base };
+  // Une fiche retiree de fiches.json laisse son historique derriere elle. On l'ecarte
+  // a la lecture, sinon elle continue de gonfler les totaux et les courbes.
+  const noms = new Set(FICHES.map(f => f.name));
+  const prune = h => {
+    const out = {};
+    for (const [date, snap] of Object.entries(h || {})) {
+      const s = {};
+      for (const [n, v] of Object.entries(snap || {})) if (noms.has(n)) s[n] = v;
+      out[date] = s;
+    }
+    return out;
+  };
+  return { fiches: FICHES, region: REGION, avis: prune(avis), rank: prune(rank), ids, rankMeta: meta, base };
 }
 
 module.exports = { snapAvis, snapRank, allData, rankCooldown, relink };
