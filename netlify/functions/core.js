@@ -37,21 +37,29 @@ async function resolveIds() {
     const queries = [f.q + ' ' + (f.region || REGION), f.q, f.name];
     for (const q of queries) {
       try {
-        const u = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + encodeURIComponent(q) + '&location=' + f.ll + '&radius=15000&key=' + K;
-        const j = await to(fetch(u).then(r => r.json()), 6500);
-        const results = (j && j.results) || [];
-        const m = pickMatch(results, r => r.name, t);
-        if (m && m.hit.place_id) { ids[f.name] = m.hit.place_id; break; }
+        const ll = f.ll.split(',').map(Number);
+        const j = await to(fetch('https://places.googleapis.com/v1/places:searchText', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.id,places.displayName' },
+          body: JSON.stringify({ textQuery: q, locationBias: { circle: { center: { latitude: ll[0], longitude: ll[1] }, radius: 15000 } } })
+        }).then(r => r.json()), 6500);
+        const results = (j && j.places) || [];
+        const m = pickMatch(results, r => r.displayName && r.displayName.text, t);
+        if (m && m.hit.id) { ids[f.name] = m.hit.id; break; }
       } catch (e) {}
     }
     if (!ids[f.name]) {
       for (const q of [f.name, f.q]) {
         try {
-          const u = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=' + encodeURIComponent(q) + '&inputtype=textquery&fields=place_id,name&locationbias=' + encodeURIComponent('circle:25000@' + f.ll) + '&key=' + K;
-          const j = await to(fetch(u).then(r => r.json()), 6500);
-          const cands = (j && j.candidates) || [];
-          const m = pickMatch(cands, r => r.name, t);
-          if (m && m.hit.place_id) { ids[f.name] = m.hit.place_id; break; }
+          const ll = f.ll.split(',').map(Number);
+          const j = await to(fetch('https://places.googleapis.com/v1/places:searchText', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.id,places.displayName' },
+            body: JSON.stringify({ textQuery: q, locationBias: { circle: { center: { latitude: ll[0], longitude: ll[1] }, radius: 25000 } } })
+          }).then(r => r.json()), 6500);
+          const cands = (j && j.places) || [];
+          const m = pickMatch(cands, r => r.displayName && r.displayName.text, t);
+          if (m && m.hit.id) { ids[f.name] = m.hit.id; break; }
         } catch (e) {}
       }
     }
@@ -101,14 +109,13 @@ async function snapAvisWave(start) {
   const snap = {};
   await Promise.all(wave.map(async f => {
     const pid = ids[f.name]; if (!pid) return;
-    const u = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=' + pid + '&fields=user_ratings_total,rating&key=' + K;
+    const u = 'https://places.googleapis.com/v1/places/' + pid + '?fields=rating,userRatingCount&key=' + K;
     for (const ms of [7000, 9000]) {
       try {
-        const j = await to(fetch(u).then(r => r.json()), ms);
-        // Google omet user_ratings_total quand la fiche n'a aucun avis : c'est 0, pas une absence.
-        if (j && j.status === 'OK' && j.result) {
-          const res = j.result;
-          snap[f.name] = { n: typeof res.user_ratings_total === 'number' ? res.user_ratings_total : 0, r: res.rating || null };
+        const j = await to(fetch(u).then(r => r.ok ? r.json() : null), ms);
+        // API New : une fiche sans avis renvoie {} — userRatingCount absent = 0, pas une absence.
+        if (j && !j.error) {
+          snap[f.name] = { n: typeof j.userRatingCount === 'number' ? j.userRatingCount : 0, r: j.rating || null };
           return;
         }
       } catch (e) {}

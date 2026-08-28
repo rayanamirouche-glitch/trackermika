@@ -19,14 +19,14 @@ exports.handler = async (event) => {
       let google = null;
       if (firstLinked) {
         const K = process.env.PLACES_API_KEY;
-        const u = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=' + ids[firstLinked.name] + '&fields=user_ratings_total,rating&key=' + K;
+        const u = 'https://places.googleapis.com/v1/places/' + ids[firstLinked.name] + '?fields=rating,userRatingCount&key=' + K;
         const j = await fetch(u).then(r => r.json()).catch(e => ({ fetch_error: String(e) }));
         google = {
           fiche: firstLinked.name,
-          status: j.status || null,
-          error_message: j.error_message || null,
+          status: j.error ? 'ERROR' : (j.fetch_error ? 'FETCH_ERROR' : 'OK'),
+          error_message: j.error ? (j.error.message || null) : null,
           fetch_error: j.fetch_error || null,
-          n: j.result ? j.result.user_ratings_total : null
+          n: typeof j.userRatingCount === 'number' ? j.userRatingCount : ((j.error || j.fetch_error) ? null : 0)
         };
       }
       return {
