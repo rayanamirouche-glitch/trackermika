@@ -46,8 +46,21 @@ exports.handler = async (event) => {
           const j = await fetch(u).then(r => r.json());
           const gname = (j.displayName && j.displayName.text) || null;
           const a = norm(f.name), b = norm(gname);
-          const match = !!gname && (a === b || a.includes(b) || b.includes(a));
-          out.push({ fiche: f.name, id: pid, google: gname, n: (typeof j.userRatingCount === 'number' ? j.userRatingCount : 0), adresse: j.formattedAddress || null, etat: match ? 'OK' : 'MAUVAISE_FICHE' });
+          // Google porte souvent des fautes de frappe dans le nom de la fiche
+          // (Koninglso/Koningslo, Ottignes/Ottignies). Un simple include() classait
+          // ces fiches correctes en MAUVAISE_FICHE. On mesure donc le recouvrement
+          // des mots, plus la presence de la ville dans l'adresse.
+          const toks = s => s.split(' ').filter(w => w.length > 2);
+          const ta = toks(a), tb = toks(b);
+          const inter = ta.filter(w => tb.some(v => v === w || (w.length > 4 && v.length > 4 && (v.startsWith(w.slice(0, 5)) || w.startsWith(v.slice(0, 5))))));
+          const ratio = (ta.length && tb.length) ? inter.length / Math.min(ta.length, tb.length) : 0;
+          const strict = !!gname && (a === b || a.includes(b) || b.includes(a));
+          const villeOk = !!(f.city && j.formattedAddress && norm(j.formattedAddress).includes(norm(f.city).split(' ')[0]));
+          let etat;
+          if (strict) etat = 'OK';
+          else if (ratio >= 0.5 || (ratio >= 0.34 && villeOk)) etat = 'OK_VARIANTE';
+          else etat = 'MAUVAISE_FICHE';
+          out.push({ fiche: f.name, id: pid, google: gname, n: (typeof j.userRatingCount === 'number' ? j.userRatingCount : 0), adresse: j.formattedAddress || null, recouvrement: Math.round(ratio * 100) / 100, etat });
         } catch (e) { out.push({ fiche: f.name, id: pid, etat: 'ERREUR', err: String(e) }); }
       }
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(out, null, 1) };
