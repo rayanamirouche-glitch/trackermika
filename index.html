@@ -46,7 +46,7 @@ tr.alert{background:#fef2f2}tr.alert:hover{background:#fee2e2}
 @media(max-width:640px){thead th:nth-child(3),tbody td:nth-child(3){display:none}}
 </style></head><body>
 <div class="header"><div class="logo">R.</div>
-<div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · 25 fiches · maj auto nocturne</div></div>
+<div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · maj auto nocturne</div></div>
 <div class="btns">
 <button class="btn btn-avis" id="btnAvis" onclick="runAvis()">↻ Actualiser AVIS</button>
 <button class="btn btn-rank" id="btnRank" onclick="runRank()">📍 Classements</button>
@@ -86,6 +86,7 @@ async function load(){
 function render(){
   const { fiches, avis, rank, ids, base } = DATA;
   const BASE = base || {};
+  const hNb = document.getElementById('hNb'); if (hNb) hNb.textContent = fiches.length;
   const [dNow, dPrev] = lastTwo(avis);
   const aNow = avis[dNow] || {}, aPrev = avis[dPrev] || {};
   const rDates = dates(rank);
