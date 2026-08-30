@@ -248,5 +248,25 @@
   "city": "Cergy",
   "link": "https://maps.app.goo.gl/sRRK1uam1uMrYGFE6",
   "region": "IDF"
+ },
+ {
+  "name": "Ratzilla : dératisation 93",
+  "q": "Ratzilla : dératisation 93",
+  "target": "ratzilla",
+  "ll": "48.9436,2.3783",
+  "kw": "deratisation saint denis",
+  "city": "Saint-Denis",
+  "link": "https://www.google.com/maps/place/?q=place_id:ChIJofV6Zwxr5kcR6s9KtDypEvc",
+  "region": "IDF"
+ },
+ {
+  "name": "Nuisible rongeur zéro dératisation 93",
+  "q": "Nuisible rongeur zéro dératisation 93",
+  "target": "nuisible rongeur zero",
+  "ll": "48.9074,2.3611",
+  "kw": "deratisation saint denis",
+  "city": "Saint-Denis",
+  "link": "https://www.google.com/maps/place/?q=place_id:ChIJf8PFsuNv5kcRaSkb9IuSQ6I",
+  "region": "IDF"
  }
 ]
