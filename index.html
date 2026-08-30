@@ -44,6 +44,20 @@ tr.alert{background:#fef2f2}tr.alert:hover{background:#fee2e2}
 .minifill{height:100%;background:var(--ok);border-radius:3px}
 .minifill.part{background:var(--warn)}
 @media(max-width:640px){thead th:nth-child(3),tbody td:nth-child(3){display:none}}
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.chip{font-family:'DM Mono',monospace;font-size:.68rem;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.chip:hover{border-color:var(--muted);color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip b{font-weight:800;margin-left:5px;opacity:.85}
+.chip.ok.on{background:var(--ok);border-color:var(--ok)}
+.chip.bad.on{background:var(--bad);border-color:var(--bad)}
+.chip.warn.on{background:var(--warn);border-color:var(--warn)}
+thead th.s{cursor:pointer;user-select:none}
+thead th.s:hover{color:var(--ink)}
+thead th.s::after{content:'';font-size:.7rem;margin-left:4px}
+thead th.s.asc::after{content:'\2191'}
+thead th.s.desc::after{content:'\2193'}
+.empty{padding:26px 14px;text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:.75rem}
 </style></head><body>
 <div class="header"><div class="logo">R.</div>
 <div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · maj auto nocturne</div></div>
@@ -62,7 +76,12 @@ tr.alert{background:#fef2f2}tr.alert:hover{background:#fee2e2}
 <div class="stat"><div class="stat-lbl">Top 3 local</div><div class="stat-val" id="stTop">—</div></div>
 </div>
 <div class="chartbox"><canvas id="chart" height="90"></canvas></div>
-<table><thead><tr><th>#</th><th>Fiche</th><th>Ville</th><th>Avis</th><th>⭐</th><th>Position</th><th>J-2·J-1·J</th></tr></thead>
+<div class="filters" id="filters">
+<button class="chip on" data-f="all" onclick="setF('all')">Toutes<b id="cAll">0</b></button>
+<button class="chip ok" data-f="top3" onclick="setF('top3')">Top 3<b id="cTop3">0</b></button>
+<button class="chip bad" data-f="rankbad" onclick="setF('rankbad')">Classement à travailler<b id="cRankBad">0</b></button>
+</div>
+<table><thead><tr><th>#</th><th>Fiche</th><th>Ville</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th>J-2·J-1·J</th></tr></thead>
 <tbody id="tbody"></tbody></table>
 <div class="foot">R.Consulting · snapshot avis chaque nuit 3h UTC · classements auto le lundi</div>
 </div>
@@ -83,6 +102,40 @@ async function load(){
   }catch(e){ msg('Erreur de chargement — réessaie dans une minute') }
 }
 
+var ROWS = [], FILT = 'all', SORT = null, SDIR = 1;
+function setF(f){ FILT = f; document.querySelectorAll('#filters .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.f === f); }); applyView(); }
+function setS(k){
+  if (SORT === k) { SDIR = -SDIR; } else { SORT = k; SDIR = (k === 'pos') ? 1 : -1; }
+  document.querySelectorAll('thead th.s').forEach(function(th){
+    th.classList.remove('asc','desc');
+    if (th.dataset.k === SORT) th.classList.add(SDIR > 0 ? 'asc' : 'desc');
+  });
+  applyView();
+}
+function keep(r){
+  if (FILT === 'objok')   return r.hasObj && r.gained !== null && r.gained >= r.obj;
+  if (FILT === 'objfar')  return r.hasObj && r.gained !== null && r.gained < r.obj * 0.5;
+  if (FILT === 'top3')    return r.pos !== null && r.pos <= 3;
+  if (FILT === 'rankbad') return r.pos === null || r.pos > 3;
+  return true;
+}
+function applyView(){
+  var v = ROWS.filter(keep);
+  if (SORT) {
+    v = v.slice().sort(function(a,b){
+      var x = a[SORT], y = b[SORT];
+      // les valeurs absentes vont toujours en bas, quel que soit le sens du tri
+      if (x === null && y === null) return 0;
+      if (x === null) return 1;
+      if (y === null) return -1;
+      return (x < y ? -1 : x > y ? 1 : 0) * SDIR;
+    });
+  }
+  document.getElementById('tbody').innerHTML = v.length
+    ? v.map(function(r){ return r.html; }).join('')
+    : '<tr><td colspan="7" class="empty">aucune fiche dans cette catégorie</td></tr>';
+}
+
 function render(){
   const { fiches, avis, rank, ids, base } = DATA;
   const BASE = base || {};
@@ -90,8 +143,18 @@ function render(){
   const [dNow, dPrev] = lastTwo(avis);
   const aNow = avis[dNow] || {}, aPrev = avis[dPrev] || {};
   const rDates = dates(rank);
-  const rNow = rank[rDates[rDates.length-1]] || {};
-  const rPrev = rank[rDates[rDates.length-2]] || {};
+  // Les vagues de classement ne tombent pas toutes le meme jour (une fonction
+  // planifiee par tranche de 10 fiches). Ne lire que le dernier snapshot laissait
+  // la moitie des fiches sans position. On garde donc la derniere position connue
+  // de chaque fiche, et l'avant-derniere pour calculer l'evolution.
+  const rNow = {}, rPrev = {};
+  rDates.forEach(d => {
+    const snap = rank[d] || {};
+    Object.keys(snap).forEach(n => {
+      if (rNow[n] !== undefined) rPrev[n] = rNow[n];
+      rNow[n] = snap[n];
+    });
+  });
 
   let total = 0, totPrev = 0, pairNow = 0, notes = [], linked = 0, top3 = 0;
   const rows = fiches.map((f, i) => {
@@ -135,12 +198,21 @@ function render(){
 
     const star = (a && a.r) ? '<span class="star">' + a.r.toFixed(1) + ' ★</span>' : '<span class="fcity">—</span>';
     const alertCls = (!pid || dropped) ? ' class="alert"' : '';
-    return '<tr' + alertCls + '><td class="fcity">' + String(i+1).padStart(2,'0') + '</td>' +
+    const _html = '<tr' + alertCls + '><td class="fcity">' + String(i+1).padStart(2,'0') + '</td>' +
       '<td><a class="fname" href="' + mapsUrl + '" target="_blank" rel="noopener">' + f.name + '</a></td>' +
       '<td class="fcity">' + f.city + '</td><td>' + avisCell + '</td><td>' + star + '</td><td>' + posCell + '</td>' + c3cell(f.name) + '</tr>';
-  }).join('');
+  const _hasObj = !!f.obj;
+    const _gained = (_hasObj && BASE[f.name] != null && n != null) ? Math.max(0, n - BASE[f.name]) : null;
+    return { html: _html, pos: pos, n: n, note: (a && a.r) ? a.r : null,
+             hasObj: _hasObj, obj: f.obj || 0, gained: _gained,
+             pct: (_hasObj && _gained !== null) ? _gained / f.obj : null };
+  });
 
-  $('tbody').innerHTML = rows;
+  ROWS = rows;
+  $('cAll').textContent = rows.length;
+  $('cTop3').textContent = rows.filter(r => r.pos !== null && r.pos <= 3).length;
+  $('cRankBad').textContent = rows.filter(r => r.pos === null || r.pos > 3).length;
+  applyView();
   const dTot = totPrev ? pairNow - totPrev : 0;
   $('stTotal').innerHTML = total + (dTot > 0 ? '<small>+' + dTot + '</small>' : '');
   $('stDay').textContent = totPrev ? ((dTot > 0 ? '+' : '') + dTot) : '—';
