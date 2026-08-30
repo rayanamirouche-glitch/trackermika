@@ -58,6 +58,8 @@ thead th.s::after{content:'';font-size:.7rem;margin-left:4px}
 thead th.s.asc::after{content:'\2191'}
 thead th.s.desc::after{content:'\2193'}
 .empty{padding:26px 14px;text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:.75rem}
+.filters.met{margin-top:-4px}
+.chip.met.on{background:var(--terra);border-color:var(--terra);color:#fff}
 </style></head><body>
 <div class="header"><div class="logo">R.</div>
 <div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · maj auto nocturne</div></div>
@@ -76,6 +78,7 @@ thead th.s.desc::after{content:'\2193'}
 <div class="stat"><div class="stat-lbl">Top 3 local</div><div class="stat-val" id="stTop">—</div></div>
 </div>
 <div class="chartbox"><canvas id="chart" height="90"></canvas></div>
+<div class="filters met" id="metiers"></div>
 <div class="filters" id="filters">
 <button class="chip on" data-f="all" onclick="setF('all')">Toutes<b id="cAll">0</b></button>
 <button class="chip ok" data-f="top3" onclick="setF('top3')">Top 3<b id="cTop3">0</b></button>
@@ -102,7 +105,7 @@ async function load(){
   }catch(e){ msg('Erreur de chargement — réessaie dans une minute') }
 }
 
-var ROWS = [], FILT = 'all', SORT = null, SDIR = 1;
+var ROWS = [], FILT = 'all', MET = 'all', SORT = null, SDIR = 1;
 function setF(f){ FILT = f; document.querySelectorAll('#filters .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.f === f); }); applyView(); }
 function setS(k){
   if (SORT === k) { SDIR = -SDIR; } else { SORT = k; SDIR = (k === 'pos') ? 1 : -1; }
@@ -113,6 +116,7 @@ function setS(k){
   applyView();
 }
 function keep(r){
+  if (MET !== 'all' && r.metier !== MET) return false;
   if (FILT === 'objok')   return r.hasObj && r.gained !== null && r.gained >= r.obj;
   if (FILT === 'objfar')  return r.hasObj && r.gained !== null && r.gained < r.obj * 0.5;
   if (FILT === 'top3')    return r.pos !== null && r.pos <= 3;
@@ -134,6 +138,39 @@ function applyView(){
   document.getElementById('tbody').innerHTML = v.length
     ? v.map(function(r){ return r.html; }).join('')
     : '<tr><td colspan="7" class="empty">aucune fiche dans cette catégorie</td></tr>';
+}
+
+// Le metier se deduit du mot-cle : pas de champ a maintenir dans fiches.json,
+// une nouvelle fiche est classee toute seule d'apres son kw.
+function metierOf(kw){
+  var k = (kw || '').toLowerCase();
+  if (k.indexOf('deratisation') === 0 || k.indexOf('nuisible') === 0) return 'Dératisation';
+  if (k.indexOf('pompe a chaleur') === 0 || k.indexOf('pac') === 0) return 'Pompe à chaleur';
+  if (k.indexOf('climatisation') === 0 || k.indexOf('clim') === 0) return 'Clim';
+  if (k.indexOf('couvreur') === 0 || k.indexOf('toiturier') === 0 || k.indexOf('toiture') === 0) return 'Toiture';
+  return 'Autre';
+}
+function setM(m){
+  MET = m;
+  document.querySelectorAll('#metiers .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.m === m); });
+  applyView();
+}
+function buildMetiers(rows){
+  var box = document.getElementById('metiers');
+  var noms = [];
+  rows.forEach(function(r){ if (noms.indexOf(r.metier) === -1) noms.push(r.metier); });
+  // un seul metier : la barre n'a aucun interet, on la masque
+  if (noms.length < 2) { box.style.display = 'none'; box.innerHTML = ''; MET = 'all'; return; }
+  box.style.display = '';
+  noms.sort();
+  var h = '<button class="chip met on" data-m="all" onclick="setM(\'all\')">Tous les métiers<b>' + rows.length + '</b></button>';
+  noms.forEach(function(n){
+    var c = rows.filter(function(r){ return r.metier === n; }).length;
+    h += '<button class="chip met" data-m="' + n + '" onclick="setM(\'' + n + '\')">' + n + '<b>' + c + '</b></button>';
+  });
+  box.innerHTML = h;
+  if (noms.indexOf(MET) === -1) MET = 'all';
+  document.querySelectorAll('#metiers .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.m === MET); });
 }
 
 function render(){
@@ -203,7 +240,7 @@ function render(){
       '<td class="fcity">' + f.city + '</td><td>' + avisCell + '</td><td>' + star + '</td><td>' + posCell + '</td>' + c3cell(f.name) + '</tr>';
   const _hasObj = !!f.obj;
     const _gained = (_hasObj && BASE[f.name] != null && n != null) ? Math.max(0, n - BASE[f.name]) : null;
-    return { html: _html, pos: pos, n: n, note: (a && a.r) ? a.r : null,
+    return { html: _html, metier: metierOf(f.kw), pos: pos, n: n, note: (a && a.r) ? a.r : null,
              hasObj: _hasObj, obj: f.obj || 0, gained: _gained,
              pct: (_hasObj && _gained !== null) ? _gained / f.obj : null };
   });
@@ -212,6 +249,7 @@ function render(){
   $('cAll').textContent = rows.length;
   $('cTop3').textContent = rows.filter(r => r.pos !== null && r.pos <= 3).length;
   $('cRankBad').textContent = rows.filter(r => r.pos === null || r.pos > 3).length;
+  buildMetiers(rows);
   applyView();
   const dTot = totPrev ? pairNow - totPrev : 0;
   $('stTotal').innerHTML = total + (dTot > 0 ? '<small>+' + dTot + '</small>' : '');
