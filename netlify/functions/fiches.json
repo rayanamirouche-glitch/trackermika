@@ -7,6 +7,7 @@
   "kw": "climatisation melun",
   "city": "77",
   "link": "https://maps.app.goo.gl/tXgXaUGNZo2pxFL87",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -17,6 +18,7 @@
   "kw": "climatisation versailles",
   "city": "Versailles",
   "link": "https://maps.app.goo.gl/5PN8XVvU86NzCNgc7",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -27,6 +29,7 @@
   "kw": "climatisation paris",
   "city": "Paris",
   "link": "https://maps.app.goo.gl/gBjSeFkr3pkZ1FhE7",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -37,6 +40,7 @@
   "kw": "climatisation evry",
   "city": "Évry",
   "link": "https://maps.app.goo.gl/PVep4uXoRZmBPyYUA",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -47,6 +51,7 @@
   "kw": "climatisation evry",
   "city": "Évry",
   "link": "https://maps.app.goo.gl/KAsFzVtywesFz7ZE9",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -57,6 +62,7 @@
   "kw": "climatisation creteil",
   "city": "Créteil",
   "link": "https://maps.app.goo.gl/X8heS9iJvCEdyQhi7",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -67,6 +73,7 @@
   "kw": "climatisation creteil",
   "city": "Créteil",
   "link": "https://maps.app.goo.gl/ooXjtyz3BzqryMdN6",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -77,6 +84,7 @@
   "kw": "climatisation nanterre",
   "city": "Nanterre",
   "link": "https://maps.app.goo.gl/rujJQk8spoBjm4458",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -87,6 +95,7 @@
   "kw": "climatisation cergy",
   "city": "Cergy",
   "link": "https://maps.app.goo.gl/cgX9aGXxtJ4chN3V9",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -97,6 +106,7 @@
   "kw": "climatisation cergy",
   "city": "Boisemont",
   "link": "https://maps.app.goo.gl/tMohwGePxVVKZEd9A",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -107,6 +117,7 @@
   "kw": "climatisation bobigny",
   "city": "Bobigny",
   "link": "https://maps.app.goo.gl/3xN9GuoWBq6vuvjL7",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -117,6 +128,7 @@
   "kw": "climatisation paris 8",
   "city": "Paris 8",
   "link": "https://maps.app.goo.gl/jRNpacqSYybGN1UP8",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -127,6 +139,7 @@
   "kw": "climatisation paris 15",
   "city": "Paris 15",
   "link": "https://maps.app.goo.gl/Uc4QaKsS2idbYqmf8",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -137,6 +150,7 @@
   "kw": "pompe a chaleur paris",
   "city": "Paris 8",
   "link": "https://maps.app.goo.gl/i6ohzLen99CK2FwD7",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -147,6 +161,7 @@
   "kw": "pompe a chaleur cergy",
   "city": "Cergy",
   "link": "https://maps.app.goo.gl/U7qWVfjuaPUWjPXX7",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -157,6 +172,7 @@
   "kw": "climatisation paris 15",
   "city": "Paris 15",
   "link": "https://maps.app.goo.gl/Ea5PQMBpq6mwKB3P9",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -167,6 +183,7 @@
   "kw": "pompe a chaleur paris",
   "city": "Paris",
   "link": "https://maps.app.goo.gl/pgMSRVPnzEanjhRe8",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -177,6 +194,7 @@
   "kw": "pompe a chaleur creteil",
   "city": "Val-de-Marne",
   "link": "https://maps.app.goo.gl/ZECtTNNE181TsmKL6",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -187,6 +205,7 @@
   "kw": "pompe a chaleur livry gargan",
   "city": "Livry-Gargan",
   "link": "https://maps.app.goo.gl/7qRPzRxA7tB4awE4A",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -197,6 +216,7 @@
   "kw": "pompe a chaleur chelles",
   "city": "Chelles",
   "link": "https://maps.app.goo.gl/kHQM2ToLA9drKoTGA",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -207,6 +227,7 @@
   "kw": "climatisation nogent sur oise",
   "city": "Nogent/Oise",
   "link": "https://maps.app.goo.gl/2ehTGSa9en6PpGyTA",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -217,6 +238,7 @@
   "kw": "pompe a chaleur pontault combault",
   "city": "Pontault",
   "link": "https://maps.app.goo.gl/ukw2Xs9hUVrU4PM49",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -227,6 +249,7 @@
   "kw": "pompe a chaleur creteil",
   "city": "Val-de-Marne",
   "link": "https://maps.app.goo.gl/SYS3S9YUZRSV3X8e6",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -237,6 +260,7 @@
   "kw": "pompe a chaleur cergy",
   "city": "Cergy",
   "link": "https://maps.app.goo.gl/sRRK1uam1uMrYGFE6",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -247,6 +271,7 @@
   "kw": "deratisation saint denis",
   "city": "Saint-Denis",
   "link": "https://www.google.com/maps/place/?q=place_id:ChIJofV6Zwxr5kcR6s9KtDypEvc",
+  "obj": 10,
   "region": "IDF"
  },
  {
@@ -257,6 +282,7 @@
   "kw": "deratisation saint denis",
   "city": "Saint-Denis",
   "link": "https://www.google.com/maps/place/?q=place_id:ChIJf8PFsuNv5kcRaSkb9IuSQ6I",
+  "obj": 10,
   "region": "IDF"
  }
 ]
