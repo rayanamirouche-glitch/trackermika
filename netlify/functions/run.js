@@ -8,6 +8,18 @@ exports.handler = async (event) => {
   const q = event.queryStringParameters || {};
   const baseUrl = process.env.URL || ('https://' + ((event.headers && event.headers.host) || ''));
   try {
+    if (q.type === 'serpapi') {
+      const K = process.env.SERPAPI_KEY;
+      const j = await fetch('https://serpapi.com/account?api_key=' + K).then(r => r.json()).catch(e => ({ erreur: String(e) }));
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({
+        plan: j.plan_name || null,
+        recherches_du_mois: j.searches_per_month != null ? j.searches_per_month : null,
+        utilisees: j.this_month_usage != null ? j.this_month_usage : null,
+        restantes: j.total_searches_left != null ? j.total_searches_left : null,
+        reinitialisation: j.account_rate_limit_per_hour != null ? ('limite horaire ' + j.account_rate_limit_per_hour) : null,
+        erreur: j.error || j.erreur || null
+      }, null, 1) };
+    }
     if (q.type === 'rankdiag') {
       const K = process.env.SERPAPI_KEY;
       const i = parseInt(q.i || '0', 10);
@@ -184,7 +196,8 @@ exports.handler = async (event) => {
           return { statusCode: 429, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ cooldown: h }) };
         }
       }
-      await core.snapRank(parseInt(q.start || '0', 10), baseUrl);
+      const rk = await core.snapRank(parseInt(q.start || '0', 10), baseUrl);
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(rk) };
     } else {
       return { statusCode: 400, body: JSON.stringify({ error: 'type avis|rank|relink|diag requis' }) };
     }

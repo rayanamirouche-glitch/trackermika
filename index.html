@@ -289,11 +289,27 @@ async function runRank(){
       msg('Classements déjà relevés récemment — prochain relevé possible dans ~' + j.cooldown + 'h');
       $('btnRank').disabled = false; return;
     }
+    // Le retour de chaque vague est lu : sans ca, une vague qui echoue (quota SerpAPI
+    // epuise, cle invalide) passait inapercue et le bouton annoncait "a jour".
+    let releves = 0, erreurs = 0, motif = null;
+    const compte = async (rep) => {
+      try { const j = await rep.json(); releves += (j.releves || 0); erreurs += (j.erreurs || 0); if (j.message) motif = j.message; }
+      catch (e) { erreurs++; }
+    };
+    await compte(r);
     for (let i = 1; i < waves.length; i++) {
-      msg('Vague ' + (i+1) + ' / ' + waves.length + '…');
-      await fetch('/.netlify/functions/run?type=rank&force=1&start=' + waves[i]);
+      msg('Vague ' + (i+1) + ' / ' + waves.length + ' — ' + releves + ' fiche(s) relevée(s)…');
+      await compte(await fetch('/.netlify/functions/run?type=rank&force=1&start=' + waves[i]));
+      await load();
     }
-    await load(); msg('Classements à jour ✓ (' + waves.length + ' vagues)');
+    await load();
+    if (releves === 0) {
+      msg('Aucun classement relevé' + (motif ? ' — ' + motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
+    } else if (erreurs) {
+      msg(releves + ' fiche(s) relevée(s), ' + erreurs + ' en échec' + (motif ? ' — ' + motif : '') + '. Les autres gardent leur dernière position connue.');
+    } else {
+      msg('Classements à jour ✓ (' + releves + ' fiches)');
+    }
   }catch(e){ msg('Erreur pendant le relevé — recharge et réessaie'); }
   $('btnRank').disabled = false;
 }

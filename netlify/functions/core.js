@@ -161,10 +161,15 @@ async function snapRank(start, baseUrl) {
   const snap = {};
   const ids = await getJSON('ids', {});
   let idsChanged = false;
+  let erreurs = 0, message = null;
   await Promise.all(wave.map(async f => {
     try {
       const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(f.kw) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
       const j = await to(fetch(u).then(r => r.json()), 8500);
+      // SerpAPI en erreur (quota epuise, cle invalide) renvoie {error}. Sans ce test,
+      // local_results est vide, pos vaut null, et on enregistrait "hors top 20" pour
+      // une fiche qu'on n'a simplement pas pu mesurer : la position connue etait perdue.
+      if (j && j.error) { erreurs++; message = j.error; return; }
       const rs = (j && j.local_results) || [];
       const t = normName(f.target); let pos = null;
       const m = pickMatch(rs, r => r.title, t);
@@ -173,11 +178,16 @@ async function snapRank(start, baseUrl) {
         if (!ids[f.name] && m.hit.place_id) { ids[f.name] = m.hit.place_id; idsChanged = true; }
       }
       snap[f.name] = pos;
-    } catch (e) {}
+    } catch (e) { erreurs++; message = String(e && e.message ? e.message : e); }
   }));
   if (idsChanged) await setJSON('ids', ids);
-  await setJSON('rankbatch/' + today() + '/' + start, snap);
-  if (start === 0) await setJSON('rankMeta', { last: new Date().toISOString() });
+  // Ne rien ecrire si la vague entiere a echoue : sinon on ecrase le releve du jour
+  // par une cle vide et le tableau se vide.
+  if (Object.keys(snap).length) {
+    await setJSON('rankbatch/' + today() + '/' + start, snap);
+    if (start === 0) await setJSON('rankMeta', { last: new Date().toISOString() });
+  }
+  return { releves: Object.keys(snap).length, total: wave.length, erreurs: erreurs, message: message };
 }
 
 async function rankHist() {
