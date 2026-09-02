@@ -129,7 +129,7 @@ async function snapAvisWave(start) {
   // peuvent plus s'ecraser : avec un blob unique relu-modifie-reecrit, le dernier
   // ecrivain effacait les fiches de l'autre, d'ou des totaux qui alternaient.
   await setJSON('avisbatch/' + today() + '/' + start, snap);
-  return snap;
+  return { snap: snap, releves: Object.keys(snap).length, total: wave.length };
 }
 
 // Relevé complet : enchaîne les vagues (utilisé par le snapshot nocturne et le bouton).
@@ -138,11 +138,12 @@ async function snapAvis(start) {
   if (start !== null && start !== undefined && !isNaN(start)) {
     return snapAvisWave(start);
   }
-  let last = {};
+  let releves = 0, total = 0;
   for (let s = 0; s < FICHES.length; s += AVIS_WAVE) {
-    last = await snapAvisWave(s);
+    const r = await snapAvisWave(s);
+    releves += r.releves; total += r.total;
   }
-  return last;
+  return { releves: releves, total: total };
 }
 
 const COOLDOWN_H = 48;

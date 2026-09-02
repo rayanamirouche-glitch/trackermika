@@ -269,9 +269,29 @@ function render(){
 }
 
 async function runAvis(){
-  $('btnAvis').disabled = true; msg('Relevé des avis en cours… (~15 s)');
-  try{ await fetch('/.netlify/functions/run?type=avis'); await load(); msg('Avis relevés ✓') }
-  catch(e){ msg('Relevé lancé — recharge dans une minute') }
+  $('btnAvis').disabled = true;
+  // Une requete par vague de 12 fiches. En une seule requete, la fonction Netlify
+  // enchainait toutes les vagues et depassait sa limite de 10 s : elle etait tuee
+  // en cours de route et il fallait recliquer pour finir le relevé.
+  const n = (DATA && DATA.fiches) ? DATA.fiches.length : 12;
+  const vagues = [];
+  for (let s = 0; s < n; s += 12) vagues.push(s);
+  let releves = 0, echecs = 0;
+  try{
+    for (let i = 0; i < vagues.length; i++) {
+      msg('Relevé des avis — ' + (i+1) + '/' + vagues.length + ' (' + releves + ' fiche(s))…');
+      try {
+        const r = await fetch('/.netlify/functions/run?type=avis&start=' + vagues[i]);
+        const j = await r.json();
+        releves += (j.releves || 0);
+        if (!j.releves) echecs++;
+      } catch (e) { echecs++; }
+      await load();
+    }
+    if (releves === 0) msg('Aucun avis relevé — réessaie dans une minute');
+    else if (echecs) msg(releves + ' fiche(s) relevée(s), ' + echecs + ' vague(s) en échec — reclique pour compléter');
+    else msg('Avis relevés ✓ (' + releves + ' fiches)');
+  }catch(e){ msg('Relevé interrompu — recharge la page') }
   $('btnAvis').disabled = false;
 }
 

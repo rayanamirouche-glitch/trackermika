@@ -203,7 +203,8 @@ exports.handler = async (event) => {
     }
     if (q.type === 'avis') {
       const start = (q.start !== undefined) ? parseInt(q.start, 10) : null;
-      await core.snapAvis(start);
+      const av = await core.snapAvis(start);
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ releves: av.releves, total: av.total }) };
     } else if (q.type === 'relink') {
       await core.relink();
       await core.snapAvis(null);
