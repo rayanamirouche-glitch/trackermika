@@ -65,7 +65,7 @@ thead th.s.desc::after{content:'\2193'}
 .rf:disabled{opacity:.5;cursor:wait}
 </style></head><body>
 <div class="header"><div class="logo">R.</div>
-<div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · maj auto nocturne</div></div>
+<div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · relevé manuel</div></div>
 <div class="btns">
 <button class="btn btn-avis" id="btnAvis" onclick="runAvis()">↻ Actualiser AVIS</button>
 <button class="btn btn-rank" id="btnRank" onclick="runRank()">📍 Classements</button>
@@ -89,7 +89,7 @@ thead th.s.desc::after{content:'\2193'}
 </div>
 <table><thead><tr><th>#</th><th>Fiche</th><th>Ville</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th>J-2·J-1·J</th></tr></thead>
 <tbody id="tbody"></tbody></table>
-<div class="foot">R.Consulting · snapshot avis chaque nuit 3h UTC · classements auto le lundi</div>
+<div class="foot">R.Consulting · avis relevés à la demande · classements auto le lundi</div>
 </div>
 <script>
 const admin = location.search.includes('admin');

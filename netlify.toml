@@ -1,8 +1,9 @@
 [functions]
   node_bundler = "esbuild"
 
-[functions."snapshot_avis"]
-  schedule = "0 3 */2 * *"
+# Releve des avis : PAS de planification (decision client du 2026-09-02).
+# Chaque appel Places = SKU Enterprise facture ; le client releve lui-meme
+# le tracker qu'il veut via le bouton "Actualiser AVIS".
 
 [functions."snapshot_rank"]
   schedule = "30 5 * * 1,4"
