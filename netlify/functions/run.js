@@ -201,6 +201,12 @@ exports.handler = async (event) => {
         }, null, 1)
       };
     }
+    if (q.type === 'avis1') {
+      const idx = FICHES.findIndex(f => f.name === q.name);
+      if (idx < 0) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: false, motif: 'fiche inconnue' }) };
+      const r1 = await core.snapAvisOne(idx);
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(r1) };
+    }
     if (q.type === 'avis') {
       const start = (q.start !== undefined) ? parseInt(q.start, 10) : null;
       const av = await core.snapAvis(start);

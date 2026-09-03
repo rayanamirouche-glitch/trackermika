@@ -60,6 +60,9 @@ thead th.s.desc::after{content:'\2193'}
 .empty{padding:26px 14px;text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:.75rem}
 .filters.met{margin-top:-4px}
 .chip.met.on{background:var(--terra);border-color:var(--terra);color:#fff}
+.rf{font-family:'DM Mono',monospace;font-size:.7rem;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 7px;margin-left:8px;cursor:pointer;vertical-align:middle;line-height:1.2}
+.rf:hover{color:var(--ink);border-color:var(--muted)}
+.rf:disabled{opacity:.5;cursor:wait}
 </style></head><body>
 <div class="header"><div class="logo">R.</div>
 <div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · maj auto nocturne</div></div>
@@ -173,10 +176,26 @@ function buildMetiers(rows){
   document.querySelectorAll('#metiers .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.m === MET); });
 }
 
+// Rafraichit une seule fiche : un appel Google au lieu de tout le parc.
+async function refreshOne(btn){
+  const i = parseInt(btn.dataset.i, 10);
+  const f = (DATA && DATA.fiches) ? DATA.fiches[i] : null;
+  if (!f) return;
+  btn.disabled = true; btn.textContent = '…';
+  msg('Relevé de « ' + f.name + ' »…');
+  try {
+    const r = await fetch('/.netlify/functions/run?type=avis1&name=' + encodeURIComponent(f.name));
+    const j = await r.json();
+    if (j.ok) { msg(f.name + ' : ' + j.n + ' avis' + (j.r ? ' · ' + Number(j.r).toFixed(1) + ' ★' : '')); await load(); }
+    else { msg(f.name + ' : ' + (j.motif || 'échec')); btn.disabled = false; btn.textContent = '↻'; }
+  } catch (e) { msg('Erreur pendant le relevé'); btn.disabled = false; btn.textContent = '↻'; }
+}
+
 function render(){
   const { fiches, avis, rank, ids, base } = DATA;
   const BASE = base || {};
   const hNb = document.getElementById('hNb'); if (hNb) hNb.textContent = fiches.length;
+  const bA = document.getElementById('btnAvis'); if (bA && !bA.disabled) bA.textContent = '↻ Actualiser AVIS (' + fiches.length + ' fiches · ' + (fiches.length * 0.02).toFixed(2).replace('.', ',') + ' $)';
   const [dNow, dPrev] = lastTwo(avis);
   const aNow = avis[dNow] || {}, aPrev = avis[dPrev] || {};
   const rDates = dates(rank);
@@ -223,6 +242,7 @@ function render(){
       avisCell = '<b>' + n + '</b>';
       if (dAvis) avisCell += '<span class="delta ' + (dAvis > 0 ? 'up' : 'down') + '">' + (dAvis > 0 ? '+' : '') + dAvis + '</span>';
       if (dropped) avisCell += ' <span class="unlinked">⚠</span>';
+      avisCell += ' <button class="rf" data-i="' + i + '" onclick="refreshOne(this)" title="Actualiser cette fiche seule (1 appel Google)">↻</button>';
     }
 
     let posCell;

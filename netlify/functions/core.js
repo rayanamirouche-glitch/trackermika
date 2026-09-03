@@ -236,4 +236,29 @@ async function allData() {
   return { fiches: FICHES, region: REGION, avis: prune(avis), rank: prune(rank), ids, rankMeta: meta, base };
 }
 
-module.exports = { snapAvis, snapRank, allData, rankCooldown, relink };
+// Releve d'une seule fiche, fusionne dans la cle de sa vague du jour.
+// Un seul appel Google (SKU Enterprise, ~0,02 $) : c'est le moyen de suivre
+// quelques fiches plusieurs fois par jour sans relever tout le parc.
+async function snapAvisOne(idx) {
+  const K = process.env.PLACES_API_KEY;
+  const f = FICHES[idx];
+  if (!f) return { ok: false, motif: 'fiche inconnue' };
+  const ids = await getJSON('ids', {});
+  const pid = ids[f.name];
+  if (!pid) return { ok: false, motif: 'fiche non liée' };
+  const u = 'https://places.googleapis.com/v1/places/' + pid + '?fields=rating,userRatingCount&key=' + K;
+  let j = null;
+  for (const ms of [7000, 9000]) {
+    try { j = await to(fetch(u).then(r => r.ok ? r.json() : null), ms); if (j && !j.error) break; } catch (e) { j = null; }
+  }
+  if (!j || j.error) return { ok: false, motif: "Google n'a pas répondu" };
+  const v = { n: typeof j.userRatingCount === 'number' ? j.userRatingCount : 0, r: j.rating || null };
+  const start = Math.floor(idx / AVIS_WAVE) * AVIS_WAVE;
+  const key = 'avisbatch/' + today() + '/' + start;
+  const w = await getJSON(key, {});
+  w[f.name] = v;
+  await setJSON(key, w);
+  return { ok: true, n: v.n, r: v.r };
+}
+
+module.exports = { snapAvis, snapAvisOne, snapRank, allData, rankCooldown, relink };
