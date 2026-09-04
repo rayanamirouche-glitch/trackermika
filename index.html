@@ -89,7 +89,7 @@ thead th.s.desc::after{content:'\2193'}
 </div>
 <table><thead><tr><th>#</th><th>Fiche</th><th>Ville</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th>J-2·J-1·J</th></tr></thead>
 <tbody id="tbody"></tbody></table>
-<div class="foot">R.Consulting · avis relevés à la demande · classements auto le lundi</div>
+<div class="foot">R.Consulting · avis relevés à la demande · classements à la demande</div>
 </div>
 <script>
 const admin = location.search.includes('admin');
@@ -195,6 +195,7 @@ function render(){
   const { fiches, avis, rank, ids, base } = DATA;
   const BASE = base || {};
   const hNb = document.getElementById('hNb'); if (hNb) hNb.textContent = fiches.length;
+  const bC = document.getElementById('btnC3'); if (bC && !bC.disabled) bC.textContent = '🗓 3 jours (' + fiches.length + ' rech. SerpAPI)';
   const bA = document.getElementById('btnAvis'); if (bA && !bA.disabled) bA.textContent = '↻ Actualiser AVIS (' + fiches.length + ' fiches · ' + (fiches.length * 0.02).toFixed(2).replace('.', ',') + ' $)';
   const [dNow, dPrev] = lastTwo(avis);
   const aNow = avis[dNow] || {}, aPrev = avis[dPrev] || {};

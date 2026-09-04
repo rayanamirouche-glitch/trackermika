@@ -9,7 +9,9 @@ const parisDate = d => new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Pari
 
 async function countRecent(placeId, buckets, cutoff) {
   let token = null, pages = 0, stop = false;
-  while (!stop && pages < 4) {
+  // Une seule page (20 avis les plus recents) : suffisant pour J-2/J-1/J,
+  // et 4x moins de recherches SerpAPI qu'avant.
+  while (!stop && pages < 1) {
     let url = `https://serpapi.com/search.json?engine=google_maps_reviews&place_id=${placeId}&sort_by=newestFirst&hl=fr&api_key=${SERP_KEY}`;
     if (token) url += `&next_page_token=${encodeURIComponent(token)}&num=20`;
     const r = await fetch(url); const j = await r.json();

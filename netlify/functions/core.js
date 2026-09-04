@@ -110,7 +110,7 @@ async function snapAvisWave(start) {
   await Promise.all(wave.map(async f => {
     const pid = ids[f.name]; if (!pid) return;
     const u = 'https://places.googleapis.com/v1/places/' + pid + '?fields=rating,userRatingCount&key=' + K;
-    for (const ms of [7000, 9000]) {
+    for (const ms of [8500]) {
       try {
         const j = await to(fetch(u).then(r => r.ok ? r.json() : null), ms);
         // API New : une fiche sans avis renvoie {} — userRatingCount absent = 0, pas une absence.
@@ -248,7 +248,7 @@ async function snapAvisOne(idx) {
   if (!pid) return { ok: false, motif: 'fiche non liée' };
   const u = 'https://places.googleapis.com/v1/places/' + pid + '?fields=rating,userRatingCount&key=' + K;
   let j = null;
-  for (const ms of [7000, 9000]) {
+  for (const ms of [8500]) {
     try { j = await to(fetch(u).then(r => r.ok ? r.json() : null), ms); if (j && !j.error) break; } catch (e) { j = null; }
   }
   if (!j || j.error) return { ok: false, motif: "Google n'a pas répondu" };

@@ -73,7 +73,7 @@ exports.handler = async (event) => {
         const pid = ids[f.name];
         if (!pid) { out.push({ fiche: f.name, id: null, etat: 'NON_LIE' }); continue; }
         try {
-          const u = 'https://places.googleapis.com/v1/places/' + pid + '?fields=displayName,rating,userRatingCount,formattedAddress&key=' + K;
+          const u = 'https://places.googleapis.com/v1/places/' + pid + '?fields=displayName,formattedAddress&key=' + K;
           const j = await fetch(u).then(r => r.json());
           const gname = (j.displayName && j.displayName.text) || null;
           const a = norm(f.name), b = norm(gname);
@@ -91,7 +91,7 @@ exports.handler = async (event) => {
           if (strict) etat = 'OK';
           else if (ratio >= 0.5 || (ratio >= 0.34 && villeOk)) etat = 'OK_VARIANTE';
           else etat = 'MAUVAISE_FICHE';
-          out.push({ fiche: f.name, id: pid, google: gname, n: (typeof j.userRatingCount === 'number' ? j.userRatingCount : 0), adresse: j.formattedAddress || null, recouvrement: Math.round(ratio * 100) / 100, etat });
+          out.push({ fiche: f.name, id: pid, google: gname, adresse: j.formattedAddress || null, recouvrement: Math.round(ratio * 100) / 100, etat });
         } catch (e) { out.push({ fiche: f.name, id: pid, etat: 'ERREUR', err: String(e) }); }
       }
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(out, null, 1) };
