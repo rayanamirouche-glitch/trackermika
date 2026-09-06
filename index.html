@@ -68,6 +68,8 @@ thead th.s.desc::after{content:'\2193'}
 .rf{font-family:'DM Mono',monospace;font-size:.7rem;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 7px;margin-left:8px;cursor:pointer;vertical-align:middle;line-height:1.2}
 .rf:hover{color:var(--ink);border-color:var(--muted)}
 .rf:disabled{opacity:.5;cursor:wait}
+.cnt2{margin-top:3px;font-family:'DM Mono',monospace;font-size:.66rem;font-weight:700;white-space:nowrap}.postes{color:var(--ok)}.perdus{color:var(--muted);margin-left:6px}
+.cmdb{display:inline-block;margin-top:3px;font-family:'DM Mono',monospace;font-size:.62rem;font-weight:700;border-radius:8px;padding:2px 7px}.cmdb.ok{background:#e8f5e9;color:var(--ok)}.cmdb.warn{background:#fff4e5;color:#b45309}
 </style></head><body>
 <div class="header"><div class="logo">R.</div>
 <div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · relevé manuel</div></div>
@@ -284,6 +286,11 @@ async function refreshOne(btn){
 function render(){
   const { fiches, avis, rank, ids, base } = DATA;
   const BASE = base || {};
+  // Postés = avis marqués postés dans les fichiers d'avis (champ livres, recopié par sync_menage).
+  // Quand il est connu, c'est lui qui alimente la jauge d'objectif : « Google − base » devient
+  // négatif dès que Google retire d'anciens avis, alors que les nôtres sont bien en ligne.
+  const postesDe = f => (f.livres != null && f.livres !== '') ? Number(f.livres) : null;
+  const gainDe = (f, n) => { const p = postesDe(f); return p !== null ? p : Math.max(0, n - BASE[f.name]); };
   const hNb = document.getElementById('hNb'); if (hNb) hNb.textContent = fiches.length;
   const bC = document.getElementById('btnC3'); if (bC && !bC.disabled) bC.textContent = '🗓 3 jours (' + fiches.length + ' rech. SerpAPI)';
   const bA = document.getElementById('btnAvis'); if (bA && !bA.disabled) bA.textContent = '↻ Actualiser AVIS (' + fiches.length + ' fiches · ' + (fiches.length * 0.02).toFixed(2).replace('.', ',') + ' $)';
@@ -330,10 +337,18 @@ function render(){
     if (!pid) avisCell = '<span class="unlinked">non liée ⚠</span>';
     else if (n == null) avisCell = '<span class="fcity">—</span>';
     else {
-      avisCell = '<b>' + n + '</b>';
+      avisCell = '<b title="Total actuel sur Google">' + n + '</b>';
       if (dAvis) avisCell += '<span class="delta ' + (dAvis > 0 ? 'up' : 'down') + '">' + (dAvis > 0 ? '+' : '') + dAvis + '</span>';
       if (dropped) avisCell += ' <span class="unlinked">⚠</span>';
       avisCell += ' <button class="rf" data-i="' + i + '" onclick="refreshOne(this)" title="Actualiser cette fiche seule (1 appel Google)">↻</button>';
+      // Trois chiffres clairs : Google (total), Postés (+N), Perdus (−M anciens, seulement si négatif)
+      const postes = postesDe(f);
+      if (postes !== null) {
+        const perdus = (BASE[f.name] != null) ? n - (BASE[f.name] + postes) : null;
+        avisCell += '<div class="cnt2"><span class="postes" title="Avis marqués postés">+' + postes + ' postés</span>' +
+          ((perdus !== null && perdus < 0) ? '<span class="perdus" title="Google − (base + postés) : anciens avis retirés par Google">−' + Math.abs(perdus) + ' anciens</span>' : '') + '</div>';
+        if (f.commande) avisCell += '<div class="cmdb ' + (postes >= Number(f.commande) ? 'ok' : 'warn') + '">Commande : ' + postes + '/' + f.commande + '</div>';
+      }
     }
 
     let posCell;
@@ -350,7 +365,7 @@ function render(){
       '<td><a class="fname" href="' + mapsUrl + '" target="_blank" rel="noopener">' + f.name + '</a></td>' +
       '<td class="fcity">' + f.city + '</td><td>' + kwCell(f, i) + '</td><td>' + avisCell + '</td><td>' + star + '</td><td>' + posCell + '</td>' + c3cell(f.name) + '</tr>';
   const _hasObj = !!f.obj;
-    const _gained = (_hasObj && BASE[f.name] != null && n != null) ? Math.max(0, n - BASE[f.name]) : null;
+    const _gained = (_hasObj && BASE[f.name] != null && n != null) ? gainDe(f, n) : null;
     return { html: _html, name: f.name, metier: metierOf(kwEff(f)), pos: pos, n: n, note: (a && a.r) ? a.r : null,
              hasObj: _hasObj, obj: f.obj || 0, gained: _gained,
              pct: (_hasObj && _gained !== null) ? _gained / f.obj : null };
