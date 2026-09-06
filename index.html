@@ -52,6 +52,11 @@ tr.alert{background:#fef2f2}tr.alert:hover{background:#fee2e2}
 .chip.ok.on{background:var(--ok);border-color:var(--ok)}
 .chip.bad.on{background:var(--bad);border-color:var(--bad)}
 .chip.warn.on{background:var(--warn);border-color:var(--warn)}
+.kwin{font-family:'DM Mono',monospace;font-size:.68rem;border:1px solid transparent;background:transparent;color:var(--ink);padding:4px 6px;border-radius:6px;width:100%;min-width:190px}
+.kwin:hover{border-color:var(--line);background:#fff}.kwin:focus{border-color:var(--terra);outline:none;background:#fff}.kwin.over{color:var(--terra);font-weight:700}.kwin:disabled{opacity:.5}
+.kwcell{display:flex;align-items:center;gap:4px}.kwrst{border:none;background:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:2px}.kwrst:hover{color:var(--terra)}
+.selbox{width:15px;height:15px;cursor:pointer;accent-color:var(--terra)}
+.btn-sel{background:var(--terra);color:#fff}.btn-sel:hover{background:#a8461f}
 thead th.s{cursor:pointer;user-select:none}
 thead th.s:hover{color:var(--ink)}
 thead th.s::after{content:'';font-size:.7rem;margin-left:4px}
@@ -69,6 +74,7 @@ thead th.s.desc::after{content:'\2193'}
 <div class="btns">
 <button class="btn btn-avis" id="btnAvis" onclick="runAvis()">↻ Actualiser AVIS</button>
 <button class="btn btn-rank" id="btnRank" onclick="runRank()">📍 Classements</button>
+<button class="btn btn-sel" id="btnSel" onclick="runRankSel()" title="Coche des fiches dans le tableau, puis mesure leur classement (1 recherche SerpAPI par fiche)">📍 Classement des cochées (0)</button>
 <button class="btn btn-rank" id="btnC3" onclick="runC3()">🗓 3 jours</button>
 </div></div>
 <div class="msg" id="msg"></div>
@@ -87,7 +93,7 @@ thead th.s.desc::after{content:'\2193'}
 <button class="chip ok" data-f="top3" onclick="setF('top3')">Top 3<b id="cTop3">0</b></button>
 <button class="chip bad" data-f="rankbad" onclick="setF('rankbad')">Classement à travailler<b id="cRankBad">0</b></button>
 </div>
-<table><thead><tr><th>#</th><th>Fiche</th><th>Ville</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th>J-2·J-1·J</th></tr></thead>
+<table><thead><tr><th><input type="checkbox" class="selbox" id="selAll" onchange="selAllVisible(this.checked)" title="Cocher / décocher les fiches affichées"></th><th>#</th><th>Fiche</th><th>Ville</th><th>Mot-clé de classement</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th>J-2·J-1·J</th></tr></thead>
 <tbody id="tbody"></tbody></table>
 <div class="foot">R.Consulting · avis relevés à la demande · classements à la demande</div>
 </div>
@@ -104,11 +110,93 @@ async function load(){
   try{
     const r = await fetch('/.netlify/functions/data');
     DATA = await r.json();
+    KW = DATA.kwover || {};
     render();
   }catch(e){ msg('Erreur de chargement — réessaie dans une minute') }
 }
 
 var ROWS = [], FILT = 'all', MET = 'all', SORT = null, SDIR = 1;
+
+// ── Mot-clé par fiche et classement des fiches cochées ──
+// KW : mots-clés personnalisés (blob 'kw' du tracker), SEL : fiches cochées.
+var KW = {}, SEL = new Set();
+function escAttr(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function kwEff(f){ return KW[f.name] || f.kw; }
+function kwCell(f, i){
+  var over = !!KW[f.name];
+  var h = '<div class="kwcell"><input class="kwin' + (over ? ' over' : '') + '" data-i="' + i + '" value="' + escAttr(kwEff(f)) + '"' +
+    ' onchange="saveKw(this)" onkeydown="if(event.key===\'Enter\')this.blur()"' +
+    ' title="' + (over ? 'Mot-clé personnalisé — fichier : ' + escAttr(f.kw) : 'Clique pour modifier le mot-clé de classement') + '">';
+  if (over) h += '<button class="kwrst" data-i="' + i + '" onclick="resetKw(this)" title="Revenir au mot-clé du fichier : ' + escAttr(f.kw) + '">↺</button>';
+  return h + '</div>';
+}
+function updSelBtn(){
+  var b = $('btnSel'); if (!b || b.disabled) return;
+  b.textContent = '📍 Classement des cochées (' + SEL.size + (SEL.size ? ' · ' + SEL.size + ' rech. SerpAPI' : '') + ')';
+}
+function toggleSel(cb){
+  var n = DATA.fiches[parseInt(cb.dataset.i, 10)].name;
+  if (cb.checked) SEL.add(n); else SEL.delete(n);
+  updSelBtn();
+  var all = $('selAll'); if (all && !cb.checked) all.checked = false;
+}
+function selAllVisible(on){
+  document.querySelectorAll('#tbody .selbox').forEach(function(cb){
+    cb.checked = on;
+    var n = DATA.fiches[parseInt(cb.dataset.i, 10)].name;
+    if (on) SEL.add(n); else SEL.delete(n);
+  });
+  updSelBtn();
+}
+async function postKw(body){
+  const r = await fetch('/.netlify/functions/run?type=setkw', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'échec');
+  KW = j.kw || {};
+}
+async function saveKw(inp){
+  const f = DATA.fiches[parseInt(inp.dataset.i, 10)];
+  const v = inp.value.trim();
+  if (!v) { inp.value = kwEff(f); return; }
+  if (v === kwEff(f)) return;
+  inp.disabled = true;
+  msg('Enregistrement du mot-clé de « ' + f.name + ' »…');
+  try {
+    if (v === f.kw) await postKw({ clear: [f.name] });
+    else { const set = {}; set[f.name] = v; await postKw({ set: set }); }
+    SEL.add(f.name);
+    render();
+    msg('« ' + f.name + ' » → ' + v + ' ✓ — la fiche est cochée : clique « Classement des cochées » pour mesurer');
+  } catch (e) { msg('Mot-clé non enregistré — ' + e.message); inp.disabled = false; inp.focus(); }
+}
+async function resetKw(btn){
+  const f = DATA.fiches[parseInt(btn.dataset.i, 10)];
+  btn.disabled = true;
+  try { await postKw({ clear: [f.name] }); render(); msg('« ' + f.name + ' » → mot-clé du fichier : ' + f.kw); }
+  catch (e) { msg('Réinitialisation impossible — ' + e.message); btn.disabled = false; }
+}
+async function runRankSel(){
+  const names = DATA.fiches.map(function(f){ return f.name; }).filter(function(n){ return SEL.has(n); });
+  if (!names.length) { msg('Coche d’abord les fiches à mesurer (case à gauche de chaque ligne)'); return; }
+  if (!confirm('Relever le classement de ' + names.length + ' fiche(s) ? (' + names.length + ' recherche(s) SerpAPI)')) return;
+  $('btnSel').disabled = true;
+  let releves = 0, erreurs = 0, motif = null; const res = [];
+  try {
+    for (let s = 0; s < names.length; s += 10) {
+      const lot = names.slice(s, s + 10);
+      msg('Classement des cochées — ' + Math.min(s + 10, names.length) + ' / ' + names.length + '…');
+      const r = await fetch('/.netlify/functions/run?type=rankselect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ names: lot }) });
+      const j = await r.json();
+      releves += (j.releves || 0); erreurs += (j.erreurs || 0); if (j.message) motif = j.message;
+      Object.keys(j.positions || {}).forEach(function(n){ res.push(n.split(' ').slice(0, 3).join(' ') + ' ' + (j.positions[n] === null ? 'hors top 20' : '#' + j.positions[n])); });
+    }
+    await load();
+    if (releves === 0) msg('Aucun classement relevé' + (motif ? ' — ' + motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
+    else msg('Classement ✓ ' + res.join(' · ') + (erreurs ? ' — ' + erreurs + ' en échec' + (motif ? ' (' + motif + ')' : '') : ''));
+  } catch (e) { msg('Erreur pendant le relevé — recharge et réessaie'); }
+  $('btnSel').disabled = false;
+  updSelBtn();
+}
 function setF(f){ FILT = f; document.querySelectorAll('#filters .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.f === f); }); applyView(); }
 function setS(k){
   if (SORT === k) { SDIR = -SDIR; } else { SORT = k; SDIR = (k === 'pos') ? 1 : -1; }
@@ -140,7 +228,8 @@ function applyView(){
   }
   document.getElementById('tbody').innerHTML = v.length
     ? v.map(function(r){ return r.html; }).join('')
-    : '<tr><td colspan="7" class="empty">aucune fiche dans cette catégorie</td></tr>';
+    : '<tr><td colspan="9" class="empty">aucune fiche dans cette catégorie</td></tr>';
+  var all = document.getElementById('selAll'); if (all) all.checked = v.length > 0 && v.every(function(r){ return SEL.has(r.name); });
 }
 
 // Le metier se deduit du mot-cle : pas de champ a maintenir dans fiches.json,
@@ -148,7 +237,8 @@ function applyView(){
 function metierOf(kw){
   var k = (kw || '').toLowerCase();
   if (k.indexOf('deratisation') === 0 || k.indexOf('nuisible') === 0) return 'Dératisation';
-  if (k.indexOf('pompe a chaleur') === 0 || k.indexOf('pac') === 0) return 'Pompe à chaleur';
+  if (k.indexOf('depannage chaudiere') === 0 || k.indexOf('chaudiere') === 0 || k.indexOf('chauffagiste') === 0) return 'Chaudière';
+  if (k.indexOf('pompe a chaleur') === 0 || k.indexOf('depannage pompe a chaleur') === 0 || k.indexOf('pac') === 0) return 'Pompe à chaleur';
   if (k.indexOf('climatisation') === 0 || k.indexOf('clim') === 0) return 'Clim';
   if (k.indexOf('couvreur') === 0 || k.indexOf('toiturier') === 0 || k.indexOf('toiture') === 0) return 'Toiture';
   return 'Autre';
@@ -256,12 +346,12 @@ function render(){
 
     const star = (a && a.r) ? '<span class="star">' + a.r.toFixed(1) + ' ★</span>' : '<span class="fcity">—</span>';
     const alertCls = (!pid || dropped) ? ' class="alert"' : '';
-    const _html = '<tr' + alertCls + '><td class="fcity">' + String(i+1).padStart(2,'0') + '</td>' +
+    const _html = '<tr' + alertCls + '><td><input type="checkbox" class="selbox" data-i="' + i + '"' + (SEL.has(f.name) ? ' checked' : '') + ' onchange="toggleSel(this)"></td><td class="fcity">' + String(i+1).padStart(2,'0') + '</td>' +
       '<td><a class="fname" href="' + mapsUrl + '" target="_blank" rel="noopener">' + f.name + '</a></td>' +
-      '<td class="fcity">' + f.city + '</td><td>' + avisCell + '</td><td>' + star + '</td><td>' + posCell + '</td>' + c3cell(f.name) + '</tr>';
+      '<td class="fcity">' + f.city + '</td><td>' + kwCell(f, i) + '</td><td>' + avisCell + '</td><td>' + star + '</td><td>' + posCell + '</td>' + c3cell(f.name) + '</tr>';
   const _hasObj = !!f.obj;
     const _gained = (_hasObj && BASE[f.name] != null && n != null) ? Math.max(0, n - BASE[f.name]) : null;
-    return { html: _html, metier: metierOf(f.kw), pos: pos, n: n, note: (a && a.r) ? a.r : null,
+    return { html: _html, name: f.name, metier: metierOf(kwEff(f)), pos: pos, n: n, note: (a && a.r) ? a.r : null,
              hasObj: _hasObj, obj: f.obj || 0, gained: _gained,
              pct: (_hasObj && _gained !== null) ? _gained / f.obj : null };
   });
@@ -272,6 +362,7 @@ function render(){
   $('cRankBad').textContent = rows.filter(r => r.pos === null || r.pos > 3).length;
   buildMetiers(rows);
   applyView();
+  updSelBtn();
   const dTot = totPrev ? pairNow - totPrev : 0;
   $('stTotal').innerHTML = total + (dTot > 0 ? '<small>+' + dTot + '</small>' : '');
   $('stDay').textContent = totPrev ? ((dTot > 0 ? '+' : '') + dTot) : '—';

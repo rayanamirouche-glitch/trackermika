@@ -8,6 +8,32 @@ exports.handler = async (event) => {
   const q = event.queryStringParameters || {};
   const baseUrl = process.env.URL || ('https://' + ((event.headers && event.headers.host) || ''));
   try {
+    if (q.type === 'setkw') {
+      // Mot-cle de classement choisi dans le tableau (POST {set:{nom:kw}, clear:[noms]}).
+      // Stocke dans le blob 'kw' ; prime sur fiches.json tant qu'il n'est pas efface.
+      let payload;
+      try { payload = JSON.parse(event.body || '{}'); } catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'body JSON invalide' }) }; }
+      const store = getStore('tracker');
+      const kw = (await store.get('kw', { type: 'json' })) || {};
+      const noms = new Set(FICHES.map(f => f.name));
+      for (const n of (payload.clear || [])) delete kw[n];
+      for (const [n, v] of Object.entries(payload.set || {})) {
+        if (!noms.has(n)) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ error: 'fiche inconnue', name: n }) };
+        const s = String(v || '').trim();
+        if (s) kw[n] = s; else delete kw[n];
+      }
+      await store.setJSON('kw', kw);
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: true, kw: kw }) };
+    }
+    if (q.type === 'rankselect') {
+      // Classement des seules fiches cochees (POST {names:[...]}, 10 max par appel).
+      let payload;
+      try { payload = JSON.parse(event.body || '{}'); } catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'body JSON invalide' }) }; }
+      const names = Array.isArray(payload.names) ? payload.names : [];
+      if (!names.length) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ error: 'names requis' }) };
+      const rk = await core.snapRankSel(names);
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(rk) };
+    }
     if (q.type === 'purgerank') {
       // Supprime les releves de classement d'une date. Sert a effacer une journee
       // ecrite alors que SerpAPI etait en erreur : toutes les fiches y valent null,
@@ -22,6 +48,8 @@ exports.handler = async (event) => {
         const v = await store.get(k, { type: 'json' }).catch(() => null);
         if (v) { await store.delete(k); supprimes++; }
       }
+      const ksel = 'rankbatch/' + q.date + '/sel';
+      if (await store.get(ksel, { type: 'json' }).catch(() => null)) { await store.delete(ksel); supprimes++; }
       const rank = (await store.get('rank', { type: 'json' })) || {};
       let dansRank = false;
       if (rank[q.date]) { delete rank[q.date]; await store.setJSON('rank', rank); dansRank = true; }
@@ -44,11 +72,13 @@ exports.handler = async (event) => {
       const i = parseInt(q.i || '0', 10);
       const f = FICHES[i];
       if (!f) return { statusCode: 400, body: JSON.stringify({ error: 'index hors bornes', total: FICHES.length }) };
-      const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(f.kw) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
+      const over = (await getStore('tracker').get('kw', { type: 'json' }).catch(() => null)) || {};
+      const kwEff = over[f.name] || f.kw;
+      const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kwEff) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
       const j = await fetch(u).then(r => r.json()).catch(e => ({ fetch_error: String(e) }));
       const rs = (j && j.local_results) || [];
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({
-        fiche: f.name, index: i, kw: f.kw, ll: f.ll,
+        fiche: f.name, index: i, kw: kwEff, kw_fichier: f.kw, ll: f.ll,
         cle_serpapi_presente: !!K,
         erreur: j.error || j.fetch_error || null,
         statut: (j.search_metadata && j.search_metadata.status) || null,

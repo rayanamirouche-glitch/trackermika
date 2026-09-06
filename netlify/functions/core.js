@@ -155,30 +155,38 @@ async function rankCooldown() {
 }
 
 const WAVE = 10;
+// Mot-cle de classement effectif : celui choisi dans le tableau (blob 'kw') prime
+// sur celui de fiches.json. Le blob ne contient que les fiches personnalisees.
+async function kwOverrides() { return getJSON('kw', {}); }
+function kwOf(f, over) { return (over && over[f.name]) ? over[f.name] : f.kw; }
+
+// Une recherche SerpAPI pour une fiche : position dans le pack local, ou {error}.
+async function serpPos(f, kw, K) {
+  const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kw) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
+  const j = await to(fetch(u).then(r => r.json()), 8500);
+  // SerpAPI en erreur (quota epuise, cle invalide) renvoie {error}. Sans ce test,
+  // local_results est vide, pos vaut null, et on enregistrait "hors top 20" pour
+  // une fiche qu'on n'a simplement pas pu mesurer : la position connue etait perdue.
+  if (j && j.error) return { error: j.error };
+  const rs = (j && j.local_results) || [];
+  const m = pickMatch(rs, r => r.title, normName(f.target));
+  return { pos: m ? m.idx + 1 : null, place_id: (m && m.hit.place_id) ? m.hit.place_id : null };
+}
+
 async function snapRank(start, baseUrl) {
   const K = process.env.SERPAPI_KEY;
   start = start || 0;
   const wave = FICHES.slice(start, start + WAVE);
   const snap = {};
-  const ids = await getJSON('ids', {});
+  const [ids, over] = await Promise.all([getJSON('ids', {}), kwOverrides()]);
   let idsChanged = false;
   let erreurs = 0, message = null;
   await Promise.all(wave.map(async f => {
     try {
-      const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(f.kw) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
-      const j = await to(fetch(u).then(r => r.json()), 8500);
-      // SerpAPI en erreur (quota epuise, cle invalide) renvoie {error}. Sans ce test,
-      // local_results est vide, pos vaut null, et on enregistrait "hors top 20" pour
-      // une fiche qu'on n'a simplement pas pu mesurer : la position connue etait perdue.
-      if (j && j.error) { erreurs++; message = j.error; return; }
-      const rs = (j && j.local_results) || [];
-      const t = normName(f.target); let pos = null;
-      const m = pickMatch(rs, r => r.title, t);
-      if (m) {
-        pos = m.idx + 1;
-        if (!ids[f.name] && m.hit.place_id) { ids[f.name] = m.hit.place_id; idsChanged = true; }
-      }
-      snap[f.name] = pos;
+      const r = await serpPos(f, kwOf(f, over), K);
+      if (r.error) { erreurs++; message = r.error; return; }
+      if (r.pos !== null && !ids[f.name] && r.place_id) { ids[f.name] = r.place_id; idsChanged = true; }
+      snap[f.name] = r.pos;
     } catch (e) { erreurs++; message = String(e && e.message ? e.message : e); }
   }));
   if (idsChanged) await setJSON('ids', ids);
@@ -189,6 +197,35 @@ async function snapRank(start, baseUrl) {
     if (start === 0) await setJSON('rankMeta', { last: new Date().toISOString() });
   }
   return { releves: Object.keys(snap).length, total: wave.length, erreurs: erreurs, message: message };
+}
+
+// Classement a la demande des seules fiches cochees dans le tableau. Ecrit dans la
+// cle 'rankbatch/<jour>/sel' (fusionnee avec les releves manuels precedents du jour),
+// sans toucher au cooldown du releve complet. 10 fiches max par appel : au-dela,
+// les recherches en parallele depassent la limite de 10 s de Netlify.
+async function snapRankSel(names) {
+  const K = process.env.SERPAPI_KEY;
+  const voulu = new Set(names || []);
+  const sel = FICHES.filter(f => voulu.has(f.name)).slice(0, WAVE);
+  const [ids, over] = await Promise.all([getJSON('ids', {}), kwOverrides()]);
+  let idsChanged = false, erreurs = 0, message = null;
+  const snap = {}, kws = {};
+  await Promise.all(sel.map(async f => {
+    try {
+      const kw = kwOf(f, over);
+      const r = await serpPos(f, kw, K);
+      if (r.error) { erreurs++; message = r.error; return; }
+      if (r.pos !== null && !ids[f.name] && r.place_id) { ids[f.name] = r.place_id; idsChanged = true; }
+      snap[f.name] = r.pos; kws[f.name] = kw;
+    } catch (e) { erreurs++; message = String(e && e.message ? e.message : e); }
+  }));
+  if (idsChanged) await setJSON('ids', ids);
+  if (Object.keys(snap).length) {
+    const k = 'rankbatch/' + today() + '/sel';
+    const cur = await getJSON(k, {});
+    await setJSON(k, Object.assign(cur, snap));
+  }
+  return { releves: Object.keys(snap).length, total: sel.length, erreurs: erreurs, message: message, positions: snap, kw: kws };
 }
 
 async function rankHist() {
@@ -209,6 +246,9 @@ async function rankHist() {
     const w = await getJSON('rankbatch/' + t + '/' + s, null);
     if (w) base[t] = Object.assign(base[t] || {}, w);
   }
+  // Releves a la demande du jour (fiches cochees) : lus en dernier, ils sont les plus recents.
+  const sel = await getJSON('rankbatch/' + t + '/sel', null);
+  if (sel) base[t] = Object.assign(base[t] || {}, sel);
   return base;
 }
 
@@ -218,8 +258,8 @@ async function relink() {
 }
 
 async function allData() {
-  const [avis, rank, ids, meta, base] = await Promise.all([
-    avisHist(), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {})
+  const [avis, rank, ids, meta, base, kwover] = await Promise.all([
+    avisHist(), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {}), kwOverrides()
   ]);
   // Une fiche retiree de fiches.json laisse son historique derriere elle. On l'ecarte
   // a la lecture, sinon elle continue de gonfler les totaux et les courbes.
@@ -233,7 +273,7 @@ async function allData() {
     }
     return out;
   };
-  return { fiches: FICHES, region: REGION, avis: prune(avis), rank: prune(rank), ids, rankMeta: meta, base };
+  return { fiches: FICHES, region: REGION, avis: prune(avis), rank: prune(rank), ids, rankMeta: meta, base, kwover };
 }
 
 // Releve d'une seule fiche, fusionne dans la cle de sa vague du jour.
@@ -261,4 +301,4 @@ async function snapAvisOne(idx) {
   return { ok: true, n: v.n, r: v.r };
 }
 
-module.exports = { snapAvis, snapAvisOne, snapRank, allData, rankCooldown, relink };
+module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, allData, rankCooldown, relink };
