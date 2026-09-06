@@ -238,5 +238,145 @@
     "city": "Saint-Denis",
     "link": "https://www.google.com/maps/place/?q=place_id:ChIJf8PFsuNv5kcRaSkb9IuSQ6I",
     "region": "IDF"
+  },
+  {
+    "name": "Thermarne – depannage pompe à chaleur, Val-de-Marne et entretien (la Marne)",
+    "q": "Thermarne – depannage pompe à chaleur, Val-de-Marne et entretien (la Marne)",
+    "target": "thermarne – depannage",
+    "ll": "48.7917,2.4845",
+    "kw": "pompe a chaleur saint maur des fosses",
+    "city": "Saint-Maur-des-Fossés",
+    "link": "https://maps.app.goo.gl/XtogyrxpcBQwaE7Y7",
+    "region": "IDF"
+  },
+  {
+    "name": "Aircalor entretien pompe à chaleur et dépannage",
+    "q": "Aircalor entretien pompe à chaleur et dépannage",
+    "target": "aircalor entretien pompe",
+    "ll": "48.8767,2.1963",
+    "kw": "pompe a chaleur rueil malmaison",
+    "city": "Rueil-Malmaison",
+    "link": "https://maps.app.goo.gl/VqzXz6yp82jLXTYp6",
+    "region": "IDF"
+  },
+  {
+    "name": "Foyer Royal. Chaudière & Dépannage Saint-Germain-en-Laye",
+    "q": "Foyer Royal. Chaudière & Dépannage Saint-Germain-en-Laye",
+    "target": "foyer royal. chaudiere",
+    "ll": "48.8904,2.0755",
+    "kw": "chauffagiste saint germain en laye",
+    "city": "Saint-Germain-en-Laye",
+    "link": "https://maps.app.goo.gl/WDoTwDYfEMG3d2CK7",
+    "region": "IDF"
+  },
+  {
+    "name": "Val’Chauffe Chaudière & Dépannage Cergy",
+    "q": "Val’Chauffe Chaudière & Dépannage Cergy",
+    "target": "val’chauffe chaudiere &",
+    "ll": "49.0349,2.0642",
+    "kw": "chauffagiste cergy",
+    "city": "Cergy",
+    "link": "https://maps.app.goo.gl/KtSfcWFMZTWgskCe8",
+    "region": "IDF"
+  },
+  {
+    "name": "Solano Pompe à chaleur Argenteuil & Val-d’Oise",
+    "q": "Solano Pompe à chaleur Argenteuil & Val-d’Oise",
+    "target": "solano pompe a",
+    "ll": "48.9490,2.2412",
+    "kw": "pompe a chaleur argenteuil",
+    "city": "Argenteuil",
+    "link": "https://maps.app.goo.gl/sQavKG7TyT6D3vAD7",
+    "region": "IDF"
+  },
+  {
+    "name": "Brûlot 94 Chaudière & Chauffagiste Vitry-sur-Seine",
+    "q": "Brûlot 94 Chaudière & Chauffagiste Vitry-sur-Seine",
+    "target": "brulot 94 chaudiere",
+    "ll": "48.7856,2.4048",
+    "kw": "chauffagiste vitry sur seine",
+    "city": "Vitry-sur-Seine",
+    "link": "https://maps.app.goo.gl/MTUE7XYHFV2V7ooEA",
+    "region": "IDF"
+  },
+  {
+    "name": "Fournaise Nord Chaudière & Dépannage Saint-Denis",
+    "q": "Fournaise Nord Chaudière & Dépannage Saint-Denis",
+    "target": "fournaise nord chaudiere",
+    "ll": "48.9056,2.4966",
+    "kw": "chauffagiste bondy",
+    "city": "Bondy",
+    "link": "https://maps.app.goo.gl/FyVKFxG4LFj8jgNbA",
+    "region": "IDF"
+  },
+  {
+    "name": "Harmattan Pompe à chaleur Montreuil & Seine-Saint-Denis",
+    "q": "Harmattan Pompe à chaleur Montreuil & Seine-Saint-Denis",
+    "target": "harmattan pompe a",
+    "ll": "48.9124,2.4881",
+    "kw": "pompe a chaleur bondy",
+    "city": "Bondy",
+    "link": "https://maps.app.goo.gl/WwnZ7HAyZxJJrPGv9",
+    "region": "IDF"
+  },
+  {
+    "name": "Chaudéo 92 Chaudière & Entretien Boulogne-Billancourt",
+    "q": "Chaudéo 92 Chaudière & Entretien Boulogne-Billancourt",
+    "target": "chaudeo 92 chaudiere",
+    "ll": "48.8341,2.2292",
+    "kw": "chauffagiste boulogne billancourt",
+    "city": "Boulogne-Billancourt",
+    "link": "https://maps.app.goo.gl/GQ6G8HUGSdPbws187",
+    "region": "IDF"
+  },
+  {
+    "name": "Foehn Énergie Pompe à chaleur Versailles & Yvelines",
+    "q": "Foehn Énergie Pompe à chaleur Versailles & Yvelines",
+    "target": "foehn energie pompe",
+    "ll": "48.8126,1.8804",
+    "kw": "pompe a chaleur villiers saint frederic",
+    "city": "Villiers-Saint-Frédéric",
+    "link": "https://maps.app.goo.gl/bD9gGdcH97SgLo8x6",
+    "region": "IDF"
+  },
+  {
+    "name": "Braseo Chaudière & Chauffagiste Massy",
+    "q": "Braseo Chaudière & Chauffagiste Massy",
+    "target": "braseo chaudiere &",
+    "ll": "48.7299,2.2795",
+    "kw": "chauffagiste massy",
+    "city": "Massy",
+    "link": "https://maps.app.goo.gl/BtgMrHMyiq7mFUR77",
+    "region": "IDF"
+  },
+  {
+    "name": "Chinook Pompe à chaleur Évry & Essonne",
+    "q": "Chinook Pompe à chaleur Évry & Essonne",
+    "target": "chinook pompe a",
+    "ll": "48.6191,2.4364",
+    "kw": "pompe a chaleur evry",
+    "city": "Évry",
+    "link": "https://maps.app.goo.gl/uV8PogMLR5qiAL5E6",
+    "region": "IDF"
+  },
+  {
+    "name": "La Flamme Briarde Chaudière & Chauffagiste Melun",
+    "q": "La Flamme Briarde Chaudière & Chauffagiste Melun",
+    "target": "la flamme briarde",
+    "ll": "48.9619,2.8898",
+    "kw": "chauffagiste meaux",
+    "city": "Meaux",
+    "link": "https://maps.app.goo.gl/SvzfCRtnqua1u3pG8",
+    "region": "IDF"
+  },
+  {
+    "name": "Sirocco Pompe à chaleur Meaux & Seine-et-Marne",
+    "q": "Sirocco Pompe à chaleur Meaux & Seine-et-Marne",
+    "target": "sirocco pompe a",
+    "ll": "48.9511,2.8899",
+    "kw": "pompe a chaleur meaux",
+    "city": "Meaux",
+    "link": "https://maps.app.goo.gl/wbpo8LibX9Tnamqo6",
+    "region": "IDF"
   }
 ]
