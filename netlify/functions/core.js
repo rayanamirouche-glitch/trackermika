@@ -106,6 +106,14 @@ async function snapAvisWave(start) {
     return null;
   };
   const wave = FICHES.slice(start, start + AVIS_WAVE);
+  // Une base declaree dans fiches.json (champ "base", valeur pre-commande) prime sur le blob :
+  // la jauge ne compte que les avis postes depuis la commande.
+  const baseDecl = await getJSON('base', {});
+  let newBase = false;
+  for (const f of wave) {
+    if (typeof f.base === 'number' && baseDecl[f.name] !== f.base) { baseDecl[f.name] = f.base; newBase = true; }
+  }
+  if (newBase) await setJSON('base', baseDecl);
   const snap = {};
   await Promise.all(wave.map(async f => {
     const pid = ids[f.name]; if (!pid) return;
@@ -133,7 +141,7 @@ async function snapAvisWave(start) {
 }
 
 // Relevé complet : enchaîne les vagues (utilisé par le snapshot nocturne et le bouton).
-// Sans résolution, 25 fiches ≈ 3 vague(s) × ~2 s, ça tient dans le budget.
+// Sans résolution, 17 fiches ≈ 2 vague(s) × ~2 s, ça tient dans le budget.
 async function snapAvis(start) {
   if (start !== null && start !== undefined && !isNaN(start)) {
     return snapAvisWave(start);
@@ -155,77 +163,80 @@ async function rankCooldown() {
 }
 
 const WAVE = 10;
-// Mot-cle de classement effectif : celui choisi dans le tableau (blob 'kw') prime
-// sur celui de fiches.json. Le blob ne contient que les fiches personnalisees.
+// Mots-cles de classement effectifs : ceux choisis dans le tableau (blob 'kw', « kw1 | kw2 »)
+// priment sur fiches.json. Trois mots-cles maximum par fiche, le premier est le principal.
 async function kwOverrides() { return getJSON('kw', {}); }
-function kwOf(f, over) { return (over && over[f.name]) ? over[f.name] : f.kw; }
+function kwsOf(f, over) {
+  const brut = (over && over[f.name]) ? over[f.name] : (f.kw || '');
+  const l = String(brut).split(/\s*[|;]\s*/).map(x => x.trim()).filter(Boolean).slice(0, 3);
+  return l.length ? l : [f.kw];
+}
 
-// Une recherche SerpAPI pour une fiche : position dans le pack local, ou {error}.
+// Une recherche SerpAPI pour une fiche et un mot-cle : position dans le pack local, ou {error}.
 async function serpPos(f, kw, K) {
   const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kw) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
   const j = await to(fetch(u).then(r => r.json()), 8500);
-  // SerpAPI en erreur (quota epuise, cle invalide) renvoie {error}. Sans ce test,
-  // local_results est vide, pos vaut null, et on enregistrait "hors top 20" pour
-  // une fiche qu'on n'a simplement pas pu mesurer : la position connue etait perdue.
+  // SerpAPI en erreur (quota epuise, cle invalide) renvoie {error}. Sans ce test on enregistrait
+  // « hors top 20 » pour une fiche qu'on n'a simplement pas pu mesurer.
   if (j && j.error) return { error: j.error };
   const rs = (j && j.local_results) || [];
   const m = pickMatch(rs, r => r.title, normName(f.target));
   return { pos: m ? m.idx + 1 : null, place_id: (m && m.hit.place_id) ? m.hit.place_id : null };
 }
 
+// Classement d'une liste de fiches, tous mots-cles confondus.
+// → snap : position sur le mot-cle principal (historique 'rankbatch', filtres, fleches)
+// → snapkw : position par mot-cle (historique 'rankkw', affichage sous la position)
+async function rankFiches(list, K) {
+  const [ids, over] = await Promise.all([getJSON('ids', {}), kwOverrides()]);
+  let idsChanged = false, erreurs = 0, message = null;
+  const snap = {}, snapkw = {};
+  await Promise.all(list.map(async f => {
+    const kws = kwsOf(f, over);
+    const res = await Promise.all(kws.map(async kw => { try { return await serpPos(f, kw, K); } catch (e) { return { error: String(e && e.message ? e.message : e) }; } }));
+    kws.forEach((kw, i) => {
+      const r = res[i];
+      if (r.error) { erreurs++; message = r.error; return; }
+      snapkw[f.name] = snapkw[f.name] || {}; snapkw[f.name][kw] = r.pos;
+      if (i === 0) snap[f.name] = r.pos;
+      if (r.pos !== null && !ids[f.name] && r.place_id) { ids[f.name] = r.place_id; idsChanged = true; }
+    });
+    // le principal a echoue mais un secondaire a repondu : on garde une position plutot que rien
+    if (snap[f.name] === undefined && snapkw[f.name]) snap[f.name] = Object.values(snapkw[f.name])[0];
+  }));
+  if (idsChanged) await setJSON('ids', ids);
+  return { snap, snapkw, erreurs, message };
+}
+
 async function snapRank(start, baseUrl) {
   const K = process.env.SERPAPI_KEY;
   start = start || 0;
   const wave = FICHES.slice(start, start + WAVE);
-  const snap = {};
-  const [ids, over] = await Promise.all([getJSON('ids', {}), kwOverrides()]);
-  let idsChanged = false;
-  let erreurs = 0, message = null;
-  await Promise.all(wave.map(async f => {
-    try {
-      const r = await serpPos(f, kwOf(f, over), K);
-      if (r.error) { erreurs++; message = r.error; return; }
-      if (r.pos !== null && !ids[f.name] && r.place_id) { ids[f.name] = r.place_id; idsChanged = true; }
-      snap[f.name] = r.pos;
-    } catch (e) { erreurs++; message = String(e && e.message ? e.message : e); }
-  }));
-  if (idsChanged) await setJSON('ids', ids);
-  // Ne rien ecrire si la vague entiere a echoue : sinon on ecrase le releve du jour
-  // par une cle vide et le tableau se vide.
-  if (Object.keys(snap).length) {
-    await setJSON('rankbatch/' + today() + '/' + start, snap);
+  const r = await rankFiches(wave, K);
+  // Ne rien ecrire si la vague entiere a echoue : sinon on ecrase le releve du jour par une cle vide.
+  if (Object.keys(r.snap).length) {
+    await setJSON('rankbatch/' + today() + '/' + start, r.snap);
+    await setJSON('rankkw/' + today() + '/' + start, r.snapkw);
     if (start === 0) await setJSON('rankMeta', { last: new Date().toISOString() });
   }
-  return { releves: Object.keys(snap).length, total: wave.length, erreurs: erreurs, message: message };
+  return { releves: Object.keys(r.snap).length, total: wave.length, erreurs: r.erreurs, message: r.message, positions: r.snap, parMotCle: r.snapkw };
 }
 
-// Classement a la demande des seules fiches cochees dans le tableau. Ecrit dans la
-// cle 'rankbatch/<jour>/sel' (fusionnee avec les releves manuels precedents du jour),
-// sans toucher au cooldown du releve complet. 10 fiches max par appel : au-dela,
-// les recherches en parallele depassent la limite de 10 s de Netlify.
+// Classement a la demande des seules fiches cochees (10 max par appel : limite de 10 s de Netlify).
+// Ecrit dans 'rankbatch/<jour>/sel' et 'rankkw/<jour>/sel', fusionnes avec les releves manuels du jour,
+// sans toucher au cooldown du releve complet.
 async function snapRankSel(names) {
   const K = process.env.SERPAPI_KEY;
   const voulu = new Set(names || []);
   const sel = FICHES.filter(f => voulu.has(f.name)).slice(0, WAVE);
-  const [ids, over] = await Promise.all([getJSON('ids', {}), kwOverrides()]);
-  let idsChanged = false, erreurs = 0, message = null;
-  const snap = {}, kws = {};
-  await Promise.all(sel.map(async f => {
-    try {
-      const kw = kwOf(f, over);
-      const r = await serpPos(f, kw, K);
-      if (r.error) { erreurs++; message = r.error; return; }
-      if (r.pos !== null && !ids[f.name] && r.place_id) { ids[f.name] = r.place_id; idsChanged = true; }
-      snap[f.name] = r.pos; kws[f.name] = kw;
-    } catch (e) { erreurs++; message = String(e && e.message ? e.message : e); }
-  }));
-  if (idsChanged) await setJSON('ids', ids);
-  if (Object.keys(snap).length) {
-    const k = 'rankbatch/' + today() + '/sel';
-    const cur = await getJSON(k, {});
-    await setJSON(k, Object.assign(cur, snap));
+  const r = await rankFiches(sel, K);
+  if (Object.keys(r.snap).length) {
+    for (const [k, v] of [['rankbatch/' + today() + '/sel', r.snap], ['rankkw/' + today() + '/sel', r.snapkw]]) {
+      const cur = await getJSON(k, {});
+      await setJSON(k, Object.assign(cur, v));
+    }
   }
-  return { releves: Object.keys(snap).length, total: sel.length, erreurs: erreurs, message: message, positions: snap, kw: kws };
+  return { releves: Object.keys(r.snap).length, total: sel.length, erreurs: r.erreurs, message: r.message, positions: r.snap, parMotCle: r.snapkw };
 }
 
 async function rankHist() {
@@ -252,14 +263,39 @@ async function rankHist() {
   return base;
 }
 
+// Derniere position connue de chaque fiche pour CHAQUE mot-cle : { fiche: { kw: { pos, date } } }.
+async function rankKwHist() {
+  const cles = {};
+  try {
+    const { blobs } = await store().list({ prefix: 'rankkw/' });
+    for (const b of blobs) { const d = b.key.split('/')[1]; (cles[d] = cles[d] || new Set()).add(b.key); }
+  } catch (e) {}
+  const t = today();
+  cles[t] = cles[t] || new Set();
+  for (let s = 0; s < FICHES.length; s += WAVE) cles[t].add('rankkw/' + t + '/' + s);
+  cles[t].add('rankkw/' + t + '/sel');
+  const out = {};
+  for (const d of Object.keys(cles).sort()) {
+    for (const k of cles[d]) {
+      const w = await getJSON(k, null);
+      if (!w) continue;
+      for (const [n, m] of Object.entries(w)) {
+        out[n] = out[n] || {};
+        for (const [kw, pos] of Object.entries(m || {})) out[n][kw] = { pos: pos, date: d };
+      }
+    }
+  }
+  return out;
+}
+
 async function relink() {
   await setJSON('ids', {});
   return resolveIds();
 }
 
 async function allData() {
-  const [avis, rank, ids, meta, base, kwover] = await Promise.all([
-    avisHist(), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {}), kwOverrides()
+  const [avis, rank, ids, meta, base, kwover, objover, livover, rankKw] = await Promise.all([
+    avisHist(), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {}), kwOverrides(), getJSON('obj', {}), getJSON('livres', {}), rankKwHist()
   ]);
   // Une fiche retiree de fiches.json laisse son historique derriere elle. On l'ecarte
   // a la lecture, sinon elle continue de gonfler les totaux et les courbes.
@@ -273,7 +309,7 @@ async function allData() {
     }
     return out;
   };
-  return { fiches: FICHES, region: REGION, avis: prune(avis), rank: prune(rank), ids, rankMeta: meta, base, kwover };
+  return { fiches: FICHES, region: REGION, avis: prune(avis), rank: prune(rank), ids, rankMeta: meta, base, kwover, objover, livover, rankKw };
 }
 
 // Releve d'une seule fiche, fusionne dans la cle de sa vague du jour.

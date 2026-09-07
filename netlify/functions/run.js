@@ -8,22 +8,25 @@ exports.handler = async (event) => {
   const q = event.queryStringParameters || {};
   const baseUrl = process.env.URL || ('https://' + ((event.headers && event.headers.host) || ''));
   try {
-    if (q.type === 'setkw') {
-      // Mot-cle de classement choisi dans le tableau (POST {set:{nom:kw}, clear:[noms]}).
-      // Stocke dans le blob 'kw' ; prime sur fiches.json tant qu'il n'est pas efface.
+    // Valeurs choisies dans le tableau, stockees dans un blob par nature (kw / obj / livres),
+    // POST {set:{nom:valeur}, clear:[noms]}. Elles priment sur fiches.json tant qu'elles existent.
+    const SURCHARGES = { setkw: ['kw', v => String(v || '').trim()], setobj: ['obj', v => parseInt(v, 10)], setliv: ['livres', v => parseInt(v, 10)] };
+    if (SURCHARGES[q.type]) {
+      const [blob, conv] = SURCHARGES[q.type];
       let payload;
       try { payload = JSON.parse(event.body || '{}'); } catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'body JSON invalide' }) }; }
       const store = getStore('tracker');
-      const kw = (await store.get('kw', { type: 'json' })) || {};
+      const cur = (await store.get(blob, { type: 'json' })) || {};
       const noms = new Set(FICHES.map(f => f.name));
-      for (const n of (payload.clear || [])) delete kw[n];
+      for (const n of (payload.clear || [])) delete cur[n];
       for (const [n, v] of Object.entries(payload.set || {})) {
         if (!noms.has(n)) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ error: 'fiche inconnue', name: n }) };
-        const s = String(v || '').trim();
-        if (s) kw[n] = s; else delete kw[n];
+        const s = conv(v);
+        if (s === '' || (typeof s === 'number' && (isNaN(s) || s < 0))) delete cur[n]; else cur[n] = s;
       }
-      await store.setJSON('kw', kw);
-      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: true, kw: kw }) };
+      await store.setJSON(blob, cur);
+      const out = { ok: true }; out[blob] = cur;
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(out) };
     }
     if (q.type === 'rankselect') {
       // Classement des seules fiches cochees (POST {names:[...]}, 10 max par appel).
@@ -33,6 +36,19 @@ exports.handler = async (event) => {
       if (!names.length) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ error: 'names requis' }) };
       const rk = await core.snapRankSel(names);
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(rk) };
+    }
+    if (q.type === 'search') {
+      // Recherche libre Places (nom + coordonnees) : sert a retrouver le place_id d'une fiche.
+      const K = process.env.PLACES_API_KEY;
+      if (!q.q) return { statusCode: 400, body: JSON.stringify({ error: 'q requis' }) };
+      const body = { textQuery: q.q };
+      if (q.ll) { const c = q.ll.split(',').map(Number); body.locationBias = { circle: { center: { latitude: c[0], longitude: c[1] }, radius: 30000 } }; }
+      const j = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.id,places.displayName,places.rating,places.userRatingCount,places.formattedAddress,places.location' },
+        body: JSON.stringify(body)
+      }).then(r => r.json());
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ q: q.q, results: (j.places || []).slice(0, 5), erreur: j.error || null }, null, 1) };
     }
     if (q.type === 'purgerank') {
       // Supprime les releves de classement d'une date. Sert a effacer une journee
@@ -47,9 +63,12 @@ exports.handler = async (event) => {
         const k = 'rankbatch/' + q.date + '/' + s;
         const v = await store.get(k, { type: 'json' }).catch(() => null);
         if (v) { await store.delete(k); supprimes++; }
+        const kk = 'rankkw/' + q.date + '/' + s;
+        if (await store.get(kk, { type: 'json' }).catch(() => null)) { await store.delete(kk); }
       }
-      const ksel = 'rankbatch/' + q.date + '/sel';
-      if (await store.get(ksel, { type: 'json' }).catch(() => null)) { await store.delete(ksel); supprimes++; }
+      for (const ks of ['rankbatch/' + q.date + '/sel', 'rankkw/' + q.date + '/sel']) {
+        if (await store.get(ks, { type: 'json' }).catch(() => null)) { await store.delete(ks); supprimes++; }
+      }
       const rank = (await store.get('rank', { type: 'json' })) || {};
       let dansRank = false;
       if (rank[q.date]) { delete rank[q.date]; await store.setJSON('rank', rank); dansRank = true; }
@@ -73,7 +92,7 @@ exports.handler = async (event) => {
       const f = FICHES[i];
       if (!f) return { statusCode: 400, body: JSON.stringify({ error: 'index hors bornes', total: FICHES.length }) };
       const over = (await getStore('tracker').get('kw', { type: 'json' }).catch(() => null)) || {};
-      const kwEff = over[f.name] || f.kw;
+      const kwEff = q.kw || String(over[f.name] || f.kw).split(/\s*[|;]\s*/)[0].trim();
       const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kwEff) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
       const j = await fetch(u).then(r => r.json()).catch(e => ({ fetch_error: String(e) }));
       const rs = (j && j.local_results) || [];

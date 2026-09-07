@@ -5,24 +5,27 @@
 <style>
 :root{--ink:#111318;--muted:#9a9ea8;--line:#e2e3e6;--terra:#c2552b;--bg:#fafafa;--card:#fff;--ok:#059669;--warn:#f59e0b;--bad:#dc2626}
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);padding-bottom:60px}
-.header{position:sticky;top:0;z-index:10;background:rgba(250,250,250,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:18px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.header{position:sticky;top:0;z-index:10;background:rgba(250,250,250,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .logo{width:40px;height:40px;border-radius:11px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.05rem}
 .h-t{flex:1;min-width:200px}.h-name{font-weight:800;font-size:1.25rem}.h-sub{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted)}
-.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .btn{font-family:'DM Mono',monospace;font-size:.75rem;font-weight:700;border:none;border-radius:10px;padding:9px 14px;cursor:pointer;transition:all .15s}
 .btn-avis{background:var(--ink);color:#fff}.btn-avis:hover{background:#333}
 .btn-rank{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn-rank:hover{background:#f0f0f2}
+.btn-sel{background:var(--terra);color:#fff}.btn-sel:hover{background:#a8461f}
 .btn:disabled{opacity:.5;cursor:wait}
+.search{font-family:'DM Mono',monospace;font-size:.78rem;border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:220px;background:#fff;color:var(--ink)}
+.search:focus{outline:none;border-color:var(--terra)}
 .msg{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);padding:8px 20px;min-height:28px}
-.wrap{max-width:920px;margin:0 auto;padding:10px 16px}
+.wrap{max-width:1040px;margin:0 auto;padding:10px 16px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
 .stat-lbl{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .stat-val{font-weight:900;font-size:1.7rem;line-height:1}.stat-val small{font-size:.85rem;font-weight:700;color:var(--ok);margin-left:6px}
 .chartbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:.92rem}
-thead th{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);background:#fdfdfd}
-tbody td{padding:12px 14px;border-bottom:1px solid var(--line)}
+thead th{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);background:#fdfdfd}
+tbody td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover{background:#f9f9fb}
 tr.alert{background:#fef2f2}tr.alert:hover{background:#fee2e2}
@@ -32,19 +35,23 @@ tr.alert{background:#fef2f2}tr.alert:hover{background:#fee2e2}
 .delta.up{background:#e8f5e9;color:var(--ok)}.delta.down{background:#fee2e2;color:var(--bad)}
 .pos{font-family:'DM Mono',monospace;font-weight:800}
 .pos.top{color:var(--ok)}.pos.mid{color:var(--warn)}.pos.low,.pos.none{color:var(--muted)}
+.poskw{font-family:'DM Mono',monospace;font-size:.64rem;color:var(--muted);margin-top:3px;white-space:nowrap}.poskw b{color:var(--ink)}.poskw b.top{color:var(--ok)}
 .star{color:var(--warn);font-size:.85rem}
 .unlinked{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--bad);font-weight:700}
 .foot{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);text-align:center;padding:20px}
 .objbar{height:6px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden}
 .objfill{height:100%;background:var(--ok);border-radius:3px;transition:width .3s}
-.objcell{min-width:110px}
+.objcell{min-width:110px;cursor:pointer}.objcell:hover .objtxt{text-decoration:underline}
 .objtxt{font-family:'DM Mono',monospace;font-size:.68rem;font-weight:700}
 .objtxt.done{color:var(--ok)}
 .minibar{height:5px;background:var(--line);border-radius:3px;margin-top:5px;overflow:hidden}
 .minifill{height:100%;background:var(--ok);border-radius:3px}
 .minifill.part{background:var(--warn)}
-@media(max-width:640px){thead th:nth-child(3),tbody td:nth-child(3){display:none}}
+.edit{border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:0 3px}.edit:hover{color:var(--terra)}
+.manuel{font-size:.6rem;color:var(--terra);margin-left:4px}
+@media(max-width:640px){thead th:nth-child(4),tbody td:nth-child(4){display:none}}
 .filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.filters.met{margin-top:-4px}
 .chip{font-family:'DM Mono',monospace;font-size:.68rem;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .chip:hover{border-color:var(--muted);color:var(--ink)}
 .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -52,32 +59,32 @@ tr.alert{background:#fef2f2}tr.alert:hover{background:#fee2e2}
 .chip.ok.on{background:var(--ok);border-color:var(--ok)}
 .chip.bad.on{background:var(--bad);border-color:var(--bad)}
 .chip.warn.on{background:var(--warn);border-color:var(--warn)}
-.kwin{font-family:'DM Mono',monospace;font-size:.68rem;border:1px solid transparent;background:transparent;color:var(--ink);padding:4px 6px;border-radius:6px;width:100%;min-width:190px}
-.kwin:hover{border-color:var(--line);background:#fff}.kwin:focus{border-color:var(--terra);outline:none;background:#fff}.kwin.over{color:var(--terra);font-weight:700}.kwin:disabled{opacity:.5}
-.kwcell{display:flex;align-items:center;gap:4px}.kwrst{border:none;background:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:2px}.kwrst:hover{color:var(--terra)}
-.selbox{width:15px;height:15px;cursor:pointer;accent-color:var(--terra)}
-.btn-sel{background:var(--terra);color:#fff}.btn-sel:hover{background:#a8461f}
+.chip.met.on{background:var(--terra);border-color:var(--terra);color:#fff}
 thead th.s{cursor:pointer;user-select:none}
 thead th.s:hover{color:var(--ink)}
 thead th.s::after{content:'';font-size:.7rem;margin-left:4px}
 thead th.s.asc::after{content:'\2191'}
 thead th.s.desc::after{content:'\2193'}
 .empty{padding:26px 14px;text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:.75rem}
-.filters.met{margin-top:-4px}
-.chip.met.on{background:var(--terra);border-color:var(--terra);color:#fff}
 .rf{font-family:'DM Mono',monospace;font-size:.7rem;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 7px;margin-left:8px;cursor:pointer;vertical-align:middle;line-height:1.2}
 .rf:hover{color:var(--ink);border-color:var(--muted)}
 .rf:disabled{opacity:.5;cursor:wait}
 .cnt2{margin-top:3px;font-family:'DM Mono',monospace;font-size:.66rem;font-weight:700;white-space:nowrap}.postes{color:var(--ok)}.perdus{color:var(--muted);margin-left:6px}
 .cmdb{display:inline-block;margin-top:3px;font-family:'DM Mono',monospace;font-size:.62rem;font-weight:700;border-radius:8px;padding:2px 7px}.cmdb.ok{background:#e8f5e9;color:var(--ok)}.cmdb.warn{background:#fff4e5;color:#b45309}
+.kwin{font-family:'DM Mono',monospace;font-size:.68rem;border:1px solid transparent;background:transparent;color:var(--ink);padding:4px 6px;border-radius:6px;width:100%;min-width:190px}
+.kwin:hover{border-color:var(--line);background:#fff}.kwin:focus{border-color:var(--terra);outline:none;background:#fff}.kwin.over{color:var(--terra);font-weight:700}.kwin:disabled{opacity:.5}
+.kwcell{display:flex;align-items:center;gap:4px}.kwrst{border:none;background:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:2px}.kwrst:hover{color:var(--terra)}
+.selbox{width:15px;height:15px;cursor:pointer;accent-color:var(--terra)}
 </style></head><body>
 <div class="header"><div class="logo">R.</div>
 <div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · relevé manuel</div></div>
 <div class="btns">
+<input class="search" id="q" placeholder="Rechercher une fiche, une ville, un mot-clé…" oninput="Q=this.value;applyView()">
 <button class="btn btn-avis" id="btnAvis" onclick="runAvis()">↻ Actualiser AVIS</button>
 <button class="btn btn-rank" id="btnRank" onclick="runRank()">📍 Classements</button>
-<button class="btn btn-sel" id="btnSel" onclick="runRankSel()" title="Coche des fiches dans le tableau, puis mesure leur classement (1 recherche SerpAPI par fiche)">📍 Classement des cochées (0)</button>
+<button class="btn btn-sel" id="btnSel" onclick="runRankSel()" title="Coche des fiches dans le tableau, puis mesure leur classement (1 recherche SerpAPI par mot-clé et par fiche)">📍 Classement des cochées (0)</button>
 <button class="btn btn-rank" id="btnC3" onclick="runC3()">🗓 3 jours</button>
+<button class="btn btn-rank" id="btnRecale" onclick="recaleBase()" style="display:none;border-color:#c2552b;color:#c2552b">⚖ Recaler la base</button>
 </div></div>
 <div class="msg" id="msg"></div>
 <div class="wrap">
@@ -87,17 +94,20 @@ thead th.s.desc::after{content:'\2193'}
 <div class="stat"><div class="stat-lbl">Note moyenne</div><div class="stat-val" id="stNote">—</div></div>
 <div class="stat"><div class="stat-lbl">Fiches liées</div><div class="stat-val" id="stLink">—</div></div>
 <div class="stat"><div class="stat-lbl">Top 3 local</div><div class="stat-val" id="stTop">—</div></div>
+<div class="stat"><div class="stat-lbl">Objectif</div><div class="stat-val" id="stObj">—</div><div class="objbar"><div class="objfill" id="objFill" style="width:0%"></div></div></div>
 </div>
 <div class="chartbox"><canvas id="chart" height="90"></canvas></div>
 <div class="filters met" id="metiers"></div>
 <div class="filters" id="filters">
 <button class="chip on" data-f="all" onclick="setF('all')">Toutes<b id="cAll">0</b></button>
+<button class="chip ok" data-f="objok" onclick="setF('objok')">Objectif atteint<b id="cObjOk">0</b></button>
+<button class="chip warn" data-f="objfar" onclick="setF('objfar')">Loin de l'objectif<b id="cObjFar">0</b></button>
 <button class="chip ok" data-f="top3" onclick="setF('top3')">Top 3<b id="cTop3">0</b></button>
 <button class="chip bad" data-f="rankbad" onclick="setF('rankbad')">Classement à travailler<b id="cRankBad">0</b></button>
 </div>
-<table><thead><tr><th><input type="checkbox" class="selbox" id="selAll" onchange="selAllVisible(this.checked)" title="Cocher / décocher les fiches affichées"></th><th>#</th><th>Fiche</th><th>Ville</th><th>Mot-clé de classement</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th>J-2·J-1·J</th></tr></thead>
-<tbody id="tbody"></tbody></table>
-<div class="foot">R.Consulting · avis relevés à la demande · classements à la demande</div>
+<div style="overflow-x:auto"><table><thead><tr><th><input type="checkbox" class="selbox" id="selAll" onchange="selAllVisible(this.checked)" title="Cocher / décocher les fiches affichées"></th><th>#</th><th>Fiche</th><th>Ville</th><th>Mots-clés de classement</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th class="s" data-k="pct" onclick="setS('pct')">Objectif</th><th>J-2·J-1·J</th></tr></thead>
+<tbody id="tbody"></tbody></table></div>
+<div class="foot">R.Consulting · avis relevés à la demande · classements à la demande · plusieurs mots-clés par fiche : sépare-les par « | »</div>
 </div>
 <script>
 const admin = location.search.includes('admin');
@@ -112,93 +122,22 @@ async function load(){
   try{
     const r = await fetch('/.netlify/functions/data');
     DATA = await r.json();
-    KW = DATA.kwover || {};
+    KW = DATA.kwover || {}; OBJ = DATA.objover || {}; LIV = DATA.livover || {}; RKW = DATA.rankKw || {};
     render();
   }catch(e){ msg('Erreur de chargement — réessaie dans une minute') }
 }
 
-var ROWS = [], FILT = 'all', MET = 'all', SORT = null, SDIR = 1;
-
-// ── Mot-clé par fiche et classement des fiches cochées ──
-// KW : mots-clés personnalisés (blob 'kw' du tracker), SEL : fiches cochées.
-var KW = {}, SEL = new Set();
+var ROWS = [], FILT = 'all', MET = 'all', SORT = null, SDIR = 1, Q = '';
+// KW : mots-clés choisis dans le tableau (blob 'kw', « kw1 | kw2 »), OBJ : objectifs modifiés (blob 'obj'),
+// LIV : postés corrigés à la main (blob 'livres', admin), RKW : dernière position connue par mot-clé, SEL : fiches cochées.
+var KW = {}, OBJ = {}, LIV = {}, RKW = {}, SEL = new Set();
 function escAttr(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function kwEff(f){ return KW[f.name] || f.kw; }
-function kwCell(f, i){
-  var over = !!KW[f.name];
-  var h = '<div class="kwcell"><input class="kwin' + (over ? ' over' : '') + '" data-i="' + i + '" value="' + escAttr(kwEff(f)) + '"' +
-    ' onchange="saveKw(this)" onkeydown="if(event.key===\'Enter\')this.blur()"' +
-    ' title="' + (over ? 'Mot-clé personnalisé — fichier : ' + escAttr(f.kw) : 'Clique pour modifier le mot-clé de classement') + '">';
-  if (over) h += '<button class="kwrst" data-i="' + i + '" onclick="resetKw(this)" title="Revenir au mot-clé du fichier : ' + escAttr(f.kw) + '">↺</button>';
-  return h + '</div>';
-}
-function updSelBtn(){
-  var b = $('btnSel'); if (!b || b.disabled) return;
-  b.textContent = '📍 Classement des cochées (' + SEL.size + (SEL.size ? ' · ' + SEL.size + ' rech. SerpAPI' : '') + ')';
-}
-function toggleSel(cb){
-  var n = DATA.fiches[parseInt(cb.dataset.i, 10)].name;
-  if (cb.checked) SEL.add(n); else SEL.delete(n);
-  updSelBtn();
-  var all = $('selAll'); if (all && !cb.checked) all.checked = false;
-}
-function selAllVisible(on){
-  document.querySelectorAll('#tbody .selbox').forEach(function(cb){
-    cb.checked = on;
-    var n = DATA.fiches[parseInt(cb.dataset.i, 10)].name;
-    if (on) SEL.add(n); else SEL.delete(n);
-  });
-  updSelBtn();
-}
-async function postKw(body){
-  const r = await fetch('/.netlify/functions/run?type=setkw', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'échec');
-  KW = j.kw || {};
-}
-async function saveKw(inp){
-  const f = DATA.fiches[parseInt(inp.dataset.i, 10)];
-  const v = inp.value.trim();
-  if (!v) { inp.value = kwEff(f); return; }
-  if (v === kwEff(f)) return;
-  inp.disabled = true;
-  msg('Enregistrement du mot-clé de « ' + f.name + ' »…');
-  try {
-    if (v === f.kw) await postKw({ clear: [f.name] });
-    else { const set = {}; set[f.name] = v; await postKw({ set: set }); }
-    SEL.add(f.name);
-    render();
-    msg('« ' + f.name + ' » → ' + v + ' ✓ — la fiche est cochée : clique « Classement des cochées » pour mesurer');
-  } catch (e) { msg('Mot-clé non enregistré — ' + e.message); inp.disabled = false; inp.focus(); }
-}
-async function resetKw(btn){
-  const f = DATA.fiches[parseInt(btn.dataset.i, 10)];
-  btn.disabled = true;
-  try { await postKw({ clear: [f.name] }); render(); msg('« ' + f.name + ' » → mot-clé du fichier : ' + f.kw); }
-  catch (e) { msg('Réinitialisation impossible — ' + e.message); btn.disabled = false; }
-}
-async function runRankSel(){
-  const names = DATA.fiches.map(function(f){ return f.name; }).filter(function(n){ return SEL.has(n); });
-  if (!names.length) { msg('Coche d’abord les fiches à mesurer (case à gauche de chaque ligne)'); return; }
-  if (!confirm('Relever le classement de ' + names.length + ' fiche(s) ? (' + names.length + ' recherche(s) SerpAPI)')) return;
-  $('btnSel').disabled = true;
-  let releves = 0, erreurs = 0, motif = null; const res = [];
-  try {
-    for (let s = 0; s < names.length; s += 10) {
-      const lot = names.slice(s, s + 10);
-      msg('Classement des cochées — ' + Math.min(s + 10, names.length) + ' / ' + names.length + '…');
-      const r = await fetch('/.netlify/functions/run?type=rankselect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ names: lot }) });
-      const j = await r.json();
-      releves += (j.releves || 0); erreurs += (j.erreurs || 0); if (j.message) motif = j.message;
-      Object.keys(j.positions || {}).forEach(function(n){ res.push(n.split(' ').slice(0, 3).join(' ') + ' ' + (j.positions[n] === null ? 'hors top 20' : '#' + j.positions[n])); });
-    }
-    await load();
-    if (releves === 0) msg('Aucun classement relevé' + (motif ? ' — ' + motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
-    else msg('Classement ✓ ' + res.join(' · ') + (erreurs ? ' — ' + erreurs + ' en échec' + (motif ? ' (' + motif + ')' : '') : ''));
-  } catch (e) { msg('Erreur pendant le relevé — recharge et réessaie'); }
-  $('btnSel').disabled = false;
-  updSelBtn();
-}
+function norm(s){ return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function kwsOf(f){ return String(KW[f.name] || f.kw || '').split(/\s*[|;]\s*/).map(x => x.trim()).filter(Boolean).slice(0, 3); }
+function kwEff(f){ return kwsOf(f).join(' | '); }
+function objEff(f){ const o = OBJ[f.name]; return (o != null && o !== '') ? Number(o) : (f.obj ? Number(f.obj) : 0); }
+function livEff(f){ const l = LIV[f.name]; if (l != null && l !== '') return Number(l); return (f.livres != null && f.livres !== '') ? Number(f.livres) : null; }
+
 function setF(f){ FILT = f; document.querySelectorAll('#filters .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.f === f); }); applyView(); }
 function setS(k){
   if (SORT === k) { SDIR = -SDIR; } else { SORT = k; SDIR = (k === 'pos') ? 1 : -1; }
@@ -209,6 +148,7 @@ function setS(k){
   applyView();
 }
 function keep(r){
+  if (Q.trim() && r.search.indexOf(norm(Q.trim())) < 0) return false;
   if (MET !== 'all' && r.metier !== MET) return false;
   if (FILT === 'objok')   return r.hasObj && r.gained !== null && r.gained >= r.obj;
   if (FILT === 'objfar')  return r.hasObj && r.gained !== null && r.gained < r.obj * 0.5;
@@ -230,19 +170,20 @@ function applyView(){
   }
   document.getElementById('tbody').innerHTML = v.length
     ? v.map(function(r){ return r.html; }).join('')
-    : '<tr><td colspan="9" class="empty">aucune fiche dans cette catégorie</td></tr>';
+    : '<tr><td colspan="10" class="empty">aucune fiche ne correspond</td></tr>';
   var all = document.getElementById('selAll'); if (all) all.checked = v.length > 0 && v.every(function(r){ return SEL.has(r.name); });
 }
 
-// Le metier se deduit du mot-cle : pas de champ a maintenir dans fiches.json,
-// une nouvelle fiche est classee toute seule d'apres son kw.
+// Le metier se deduit du premier mot-cle : pas de champ a maintenir dans fiches.json.
 function metierOf(kw){
-  var k = (kw || '').toLowerCase();
-  if (k.indexOf('deratisation') === 0 || k.indexOf('nuisible') === 0) return 'Dératisation';
-  if (k.indexOf('depannage chaudiere') === 0 || k.indexOf('chaudiere') === 0 || k.indexOf('chauffagiste') === 0) return 'Chaudière';
-  if (k.indexOf('pompe a chaleur') === 0 || k.indexOf('depannage pompe a chaleur') === 0 || k.indexOf('pac') === 0) return 'Pompe à chaleur';
-  if (k.indexOf('climatisation') === 0 || k.indexOf('clim') === 0) return 'Clim';
-  if (k.indexOf('couvreur') === 0 || k.indexOf('toiturier') === 0 || k.indexOf('toiture') === 0) return 'Toiture';
+  var k = norm(kw || '');
+  if (/^(deratisation|nuisible|exterminateur|traitement charpente)/.test(k)) return 'Nuisibles';
+  if (/^(elagage|elagueur)/.test(k)) return 'Élagage';
+  if (/^(depannage chaudiere|chaudiere|chauffagiste)/.test(k)) return 'Chaudière';
+  if (/^(pompe a chaleur|depannage pompe|pac)/.test(k)) return 'Pompe à chaleur';
+  if (/^(climatisation|clim)/.test(k)) return 'Clim';
+  if (/^(couvreur|toiturier|toiture|ferblantier|zingueur|dakwerker|recherche fuite)/.test(k)) return 'Toiture';
+  if (/^(terrassement|facade|facadier)/.test(k)) return 'Autre';
   return 'Autre';
 }
 function setM(m){
@@ -268,6 +209,115 @@ function buildMetiers(rows){
   document.querySelectorAll('#metiers .chip').forEach(function(c){ c.classList.toggle('on', c.dataset.m === MET); });
 }
 
+// ── Mots-clés, sélection, objectif et postés modifiables ──
+function kwCell(f, i){
+  var over = !!KW[f.name];
+  var h = '<div class="kwcell"><input class="kwin' + (over ? ' over' : '') + '" data-i="' + i + '" value="' + escAttr(kwEff(f)) + '"' +
+    ' onchange="saveKw(this)" onkeydown="if(event.key===\'Enter\')this.blur()"' +
+    ' title="' + (over ? 'Mots-clés personnalisés — fichier : ' + escAttr(f.kw) : 'Clique pour modifier ; plusieurs mots-clés séparés par |') + '">';
+  if (over) h += '<button class="kwrst" data-i="' + i + '" onclick="resetKw(this)" title="Revenir au mot-clé du fichier : ' + escAttr(f.kw) + '">↺</button>';
+  return h + '</div>';
+}
+function updSelBtn(){
+  var b = $('btnSel'); if (!b || b.disabled) return;
+  var rech = 0; (DATA ? DATA.fiches : []).forEach(function(f){ if (SEL.has(f.name)) rech += kwsOf(f).length; });
+  b.textContent = '📍 Classement des cochées (' + SEL.size + (SEL.size ? ' · ' + rech + ' rech. SerpAPI' : '') + ')';
+}
+function toggleSel(cb){
+  var n = DATA.fiches[parseInt(cb.dataset.i, 10)].name;
+  if (cb.checked) SEL.add(n); else SEL.delete(n);
+  updSelBtn();
+  var all = $('selAll'); if (all && !cb.checked) all.checked = false;
+}
+function selAllVisible(on){
+  document.querySelectorAll('#tbody .selbox').forEach(function(cb){
+    cb.checked = on;
+    var n = DATA.fiches[parseInt(cb.dataset.i, 10)].name;
+    if (on) SEL.add(n); else SEL.delete(n);
+  });
+  updSelBtn();
+}
+async function postOver(type, body){
+  const r = await fetch('/.netlify/functions/run?type=' + type, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'échec');
+  return j;
+}
+async function saveKw(inp){
+  const f = DATA.fiches[parseInt(inp.dataset.i, 10)];
+  const v = inp.value.split(/\s*[|;]\s*/).map(x => x.trim()).filter(Boolean).slice(0, 3).join(' | ');
+  if (!v) { inp.value = kwEff(f); return; }
+  if (v === kwEff(f)) return;
+  inp.disabled = true;
+  msg('Enregistrement des mots-clés de « ' + f.name + ' »…');
+  try {
+    if (v === f.kw) { const j = await postOver('setkw', { clear: [f.name] }); KW = j.kw || {}; }
+    else { const set = {}; set[f.name] = v; const j = await postOver('setkw', { set: set }); KW = j.kw || {}; }
+    SEL.add(f.name);
+    render();
+    msg('« ' + f.name + ' » → ' + v + ' ✓ — la fiche est cochée : clique « Classement des cochées » pour mesurer');
+  } catch (e) { msg('Mots-clés non enregistrés — ' + e.message); inp.disabled = false; inp.focus(); }
+}
+async function resetKw(btn){
+  const f = DATA.fiches[parseInt(btn.dataset.i, 10)];
+  btn.disabled = true;
+  try { const j = await postOver('setkw', { clear: [f.name] }); KW = j.kw || {}; render(); msg('« ' + f.name + ' » → mot-clé du fichier : ' + f.kw); }
+  catch (e) { msg('Réinitialisation impossible — ' + e.message); btn.disabled = false; }
+}
+// Objectif : modifiable par tout le monde (Rayan et son client). Vide = revenir à la valeur du fichier.
+async function editObj(i){
+  const f = DATA.fiches[i];
+  const cur = objEff(f);
+  const v = window.prompt('Objectif de « ' + f.name + ' » (nombre d\'avis à gagner) :', cur || '');
+  if (v === null) return;
+  const n = v.trim() === '' ? null : parseInt(v, 10);
+  if (n !== null && (isNaN(n) || n < 0)) { msg('Objectif invalide'); return; }
+  try {
+    if (n === null || n === Number(f.obj || 0)) { const j = await postOver('setobj', { clear: [f.name] }); OBJ = j.obj || {}; }
+    else { const set = {}; set[f.name] = n; const j = await postOver('setobj', { set: set }); OBJ = j.obj || {}; }
+    render(); msg('Objectif de « ' + f.name + ' » : ' + (objEff(f) ? '+' + objEff(f) : 'aucun') + ' ✓');
+  } catch (e) { msg('Objectif non enregistré — ' + e.message); }
+}
+// Postés : réservé à Rayan (?admin). Google peut retirer d'anciens avis qui ne sont pas les nôtres :
+// le total baisse, mais le nombre d'avis réellement postés par rapport à l'objectif se corrige ici.
+async function editLiv(i){
+  if (!admin) return;
+  const f = DATA.fiches[i];
+  const cur = livEff(f);
+  const v = window.prompt('Avis déjà postés pour « ' + f.name + ' » (vide = valeur du ménage : ' + (f.livres != null ? f.livres : '—') + ') :', cur != null ? cur : '');
+  if (v === null) return;
+  const n = v.trim() === '' ? null : parseInt(v, 10);
+  if (n !== null && (isNaN(n) || n < 0)) { msg('Valeur invalide'); return; }
+  try {
+    if (n === null) { const j = await postOver('setliv', { clear: [f.name] }); LIV = j.livres || {}; }
+    else { const set = {}; set[f.name] = n; const j = await postOver('setliv', { set: set }); LIV = j.livres || {}; }
+    render(); msg('Postés de « ' + f.name + ' » : ' + (livEff(f) != null ? '+' + livEff(f) : '—') + ' ✓');
+  } catch (e) { msg('Non enregistré — ' + e.message); }
+}
+async function runRankSel(){
+  const names = DATA.fiches.map(function(f){ return f.name; }).filter(function(n){ return SEL.has(n); });
+  if (!names.length) { msg('Coche d’abord les fiches à mesurer (case à gauche de chaque ligne)'); return; }
+  var rech = 0; DATA.fiches.forEach(function(f){ if (SEL.has(f.name)) rech += kwsOf(f).length; });
+  if (!confirm('Relever le classement de ' + names.length + ' fiche(s) ? (' + rech + ' recherche(s) SerpAPI)')) return;
+  $('btnSel').disabled = true;
+  let releves = 0, erreurs = 0, motif = null; const res = [];
+  try {
+    for (let s = 0; s < names.length; s += 10) {
+      const lot = names.slice(s, s + 10);
+      msg('Classement des cochées — ' + Math.min(s + 10, names.length) + ' / ' + names.length + '…');
+      const r = await fetch('/.netlify/functions/run?type=rankselect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ names: lot }) });
+      const j = await r.json();
+      releves += (j.releves || 0); erreurs += (j.erreurs || 0); if (j.message) motif = j.message;
+      Object.keys(j.parMotCle || {}).forEach(function(n){ const m = j.parMotCle[n]; res.push(n.split(' ').slice(0, 3).join(' ') + ' ' + Object.keys(m).map(function(k){ return k + (m[k] === null ? ' —' : ' #' + m[k]); }).join(', ')); });
+    }
+    await load();
+    if (releves === 0) msg('Aucun classement relevé' + (motif ? ' — ' + motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
+    else msg('Classement ✓ ' + res.join(' · ') + (erreurs ? ' — ' + erreurs + ' en échec' + (motif ? ' (' + motif + ')' : '') : ''));
+  } catch (e) { msg('Erreur pendant le relevé — recharge et réessaie'); }
+  $('btnSel').disabled = false;
+  updSelBtn();
+}
+
 // Rafraichit une seule fiche : un appel Google au lieu de tout le parc.
 async function refreshOne(btn){
   const i = parseInt(btn.dataset.i, 10);
@@ -286,21 +336,20 @@ async function refreshOne(btn){
 function render(){
   const { fiches, avis, rank, ids, base } = DATA;
   const BASE = base || {};
-  // Postés = avis marqués postés dans les fichiers d'avis (champ livres, recopié par sync_menage).
+  // Postés = avis marqués postés (champ livres recopié par sync_menage, ou corrigé à la main en admin).
   // Quand il est connu, c'est lui qui alimente la jauge d'objectif : « Google − base » devient
   // négatif dès que Google retire d'anciens avis, alors que les nôtres sont bien en ligne.
-  const postesDe = f => (f.livres != null && f.livres !== '') ? Number(f.livres) : null;
+  const postesDe = f => livEff(f);
   const gainDe = (f, n) => { const p = postesDe(f); return p !== null ? p : Math.max(0, n - BASE[f.name]); };
   const hNb = document.getElementById('hNb'); if (hNb) hNb.textContent = fiches.length;
   const bC = document.getElementById('btnC3'); if (bC && !bC.disabled) bC.textContent = '🗓 3 jours (' + fiches.length + ' rech. SerpAPI)';
   const bA = document.getElementById('btnAvis'); if (bA && !bA.disabled) bA.textContent = '↻ Actualiser AVIS (' + fiches.length + ' fiches · ' + (fiches.length * 0.02).toFixed(2).replace('.', ',') + ' $)';
+  if (admin) $('btnRecale').style.display = '';
   const [dNow, dPrev] = lastTwo(avis);
   const aNow = avis[dNow] || {}, aPrev = avis[dPrev] || {};
   const rDates = dates(rank);
-  // Les vagues de classement ne tombent pas toutes le meme jour (une fonction
-  // planifiee par tranche de 10 fiches). Ne lire que le dernier snapshot laissait
-  // la moitie des fiches sans position. On garde donc la derniere position connue
-  // de chaque fiche, et l'avant-derniere pour calculer l'evolution.
+  // Les vagues de classement ne tombent pas toutes le meme jour. On garde la derniere
+  // position connue de chaque fiche, et l'avant-derniere pour calculer l'evolution.
   const rNow = {}, rPrev = {};
   rDates.forEach(d => {
     const snap = rank[d] || {};
@@ -317,8 +366,6 @@ function render(){
     if (pid) linked++;
     const n = a ? a.n : null;
     if (n != null) total += n;
-    // Delta calcule sur les seules fiches presentes dans LES DEUX releves : sinon une
-    // fiche absente du releve du jour passe pour une perte d'avis.
     if (n != null && ap && ap.n != null) { pairNow += n; totPrev += ap.n; }
     if (a && a.r) notes.push(a.r);
     const pos = rNow[f.name] != null ? rNow[f.name] : null;
@@ -341,14 +388,16 @@ function render(){
       if (dAvis) avisCell += '<span class="delta ' + (dAvis > 0 ? 'up' : 'down') + '">' + (dAvis > 0 ? '+' : '') + dAvis + '</span>';
       if (dropped) avisCell += ' <span class="unlinked">⚠</span>';
       avisCell += ' <button class="rf" data-i="' + i + '" onclick="refreshOne(this)" title="Actualiser cette fiche seule (1 appel Google)">↻</button>';
-      // Trois chiffres clairs : Google (total), Postés (+N), Perdus (−M anciens, seulement si négatif)
-      const postes = postesDe(f);
-      if (postes !== null) {
-        const perdus = (BASE[f.name] != null) ? n - (BASE[f.name] + postes) : null;
-        avisCell += '<div class="cnt2"><span class="postes" title="Avis marqués postés">+' + postes + ' postés</span>' +
-          ((perdus !== null && perdus < 0) ? '<span class="perdus" title="Google − (base + postés) : anciens avis retirés par Google">−' + Math.abs(perdus) + ' anciens</span>' : '') + '</div>';
-        if (f.commande) avisCell += '<div class="cmdb ' + (postes >= Number(f.commande) ? 'ok' : 'warn') + '">Commande : ' + postes + '/' + f.commande + '</div>';
-      }
+    }
+    // Trois chiffres clairs : Google (total), Postés (+N), Perdus (−M anciens, seulement si négatif)
+    const postes = postesDe(f);
+    if (postes !== null || admin) {
+      const perdus = (postes !== null && BASE[f.name] != null && n != null) ? n - (BASE[f.name] + postes) : null;
+      avisCell += '<div class="cnt2"><span class="postes" title="Avis marqués postés">' + (postes !== null ? '+' + postes + ' postés' : '— postés') + '</span>' +
+        (LIV[f.name] != null && LIV[f.name] !== '' ? '<span class="manuel" title="corrigé à la main">manuel</span>' : '') +
+        (admin ? '<button class="edit" onclick="editLiv(' + i + ')" title="Corriger le nombre d\'avis postés (admin)">✎</button>' : '') +
+        ((perdus !== null && perdus < 0) ? '<span class="perdus" title="Google − (base + postés) : anciens avis retirés par Google">−' + Math.abs(perdus) + ' anciens</span>' : '') + '</div>';
+      if (f.commande && postes !== null) avisCell += '<div class="cmdb ' + (postes >= Number(f.commande) ? 'ok' : 'warn') + '">Commande : ' + postes + '/' + f.commande + '</div>';
     }
 
     let posCell;
@@ -358,23 +407,53 @@ function render(){
       posCell = '<span class="pos ' + cls + '">#' + pos + '</span>';
       if (dPos) posCell += '<span class="delta ' + (dPos > 0 ? 'up' : 'down') + '">' + (dPos > 0 ? '▲' + dPos : '▼' + Math.abs(dPos)) + '</span>';
     }
+    // positions des autres mots-clés (dernier relevé connu par mot-clé)
+    const kws = kwsOf(f), rk = RKW[f.name] || {};
+    kws.slice(1).forEach(k => {
+      const e = rk[k];
+      posCell += '<div class="poskw" title="' + escAttr(k) + (e ? ' · relevé le ' + e.date : '') + '">' + escAttr(k.length > 26 ? k.slice(0, 24) + '…' : k) + ' <b' + (e && e.pos !== null && e.pos <= 3 ? ' class="top"' : '') + '>' + (e ? (e.pos === null ? 'hors top 20' : '#' + e.pos) : '—') + '</b></div>';
+    });
 
     const star = (a && a.r) ? '<span class="star">' + a.r.toFixed(1) + ' ★</span>' : '<span class="fcity">—</span>';
+    const obj = objEff(f);
+    const objMan = (OBJ[f.name] != null && OBJ[f.name] !== '') ? '<span class="manuel">modifié</span>' : '';
+    let objCell;
+    if (obj && BASE[f.name] != null && n != null) {
+      const gained = gainDe(f, n);
+      const pct = Math.min(100, Math.round(gained / obj * 100));
+      const doneCls = gained >= obj ? ' done' : '';
+      const fillCls = gained >= obj ? '' : ' part';
+      objCell = '<div class="objcell" onclick="editObj(' + i + ')" title="Clique pour modifier l\'objectif"><span class="objtxt' + doneCls + '">+' + gained + ' / +' + obj + (gained >= obj ? ' ✓' : '') + '</span>' + objMan +
+        '<div class="minibar"><div class="minifill' + fillCls + '" style="width:' + pct + '%"></div></div></div>';
+    } else if (obj) {
+      objCell = '<div class="objcell" onclick="editObj(' + i + ')" title="Clique pour modifier l\'objectif"><span class="fcity">+0 / +' + obj + '</span>' + objMan + '</div>';
+    } else {
+      objCell = '<div class="objcell" onclick="editObj(' + i + ')" title="Clique pour fixer un objectif"><span class="fcity">— ✎</span></div>';
+    }
     const alertCls = (!pid || dropped) ? ' class="alert"' : '';
     const _html = '<tr' + alertCls + '><td><input type="checkbox" class="selbox" data-i="' + i + '"' + (SEL.has(f.name) ? ' checked' : '') + ' onchange="toggleSel(this)"></td><td class="fcity">' + String(i+1).padStart(2,'0') + '</td>' +
       '<td><a class="fname" href="' + mapsUrl + '" target="_blank" rel="noopener">' + f.name + '</a></td>' +
-      '<td class="fcity">' + f.city + '</td><td>' + kwCell(f, i) + '</td><td>' + avisCell + '</td><td>' + star + '</td><td>' + posCell + '</td>' + c3cell(f.name) + '</tr>';
-  const _hasObj = !!f.obj;
+      '<td class="fcity">' + f.city + '</td><td>' + kwCell(f, i) + '</td><td>' + avisCell + '</td><td>' + star + '</td><td>' + posCell + '</td><td>' + objCell + '</td>' + c3cell(f.name) + '</tr>';
+    const _hasObj = !!obj;
     const _gained = (_hasObj && BASE[f.name] != null && n != null) ? gainDe(f, n) : null;
-    return { html: _html, name: f.name, metier: metierOf(kwEff(f)), pos: pos, n: n, note: (a && a.r) ? a.r : null,
-             hasObj: _hasObj, obj: f.obj || 0, gained: _gained,
-             pct: (_hasObj && _gained !== null) ? _gained / f.obj : null };
+    return { html: _html, name: f.name, metier: metierOf(kws[0] || f.kw), pos: pos, n: n, note: (a && a.r) ? a.r : null,
+             hasObj: _hasObj, obj: obj, gained: _gained,
+             pct: (_hasObj && _gained !== null) ? _gained / obj : null,
+             search: norm(f.name + ' ' + f.city + ' ' + kws.join(' ') + ' ' + (f.region || '')) };
   });
 
   ROWS = rows;
+  const _nObjOk  = rows.filter(r => r.hasObj && r.gained !== null && r.gained >= r.obj).length;
+  const _nObjFar = rows.filter(r => r.hasObj && r.gained !== null && r.gained < r.obj * 0.5).length;
   $('cAll').textContent = rows.length;
+  $('cObjOk').textContent = _nObjOk;
+  $('cObjFar').textContent = _nObjFar;
   $('cTop3').textContent = rows.filter(r => r.pos !== null && r.pos <= 3).length;
   $('cRankBad').textContent = rows.filter(r => r.pos === null || r.pos > 3).length;
+  // un tracker sans objectifs n'affiche pas les filtres d'objectif
+  const _anyObj = rows.some(r => r.hasObj);
+  document.querySelectorAll('#filters .chip[data-f="objok"],#filters .chip[data-f="objfar"]')
+    .forEach(c => { c.style.display = _anyObj ? '' : 'none'; });
   buildMetiers(rows);
   applyView();
   updSelBtn();
@@ -384,6 +463,15 @@ function render(){
   $('stNote').textContent = notes.length ? (notes.reduce((a,b)=>a+b,0)/notes.length).toFixed(2) + ' ★' : '—';
   $('stLink').textContent = linked + ' / ' + fiches.length;
   $('stTop').textContent = top3;
+  let gTot = 0, gObj = 0;
+  fiches.forEach(f => {
+    const o = objEff(f); if (!o) return;
+    gObj += o;
+    const a = aNow[f.name];
+    if (a && a.n != null && BASE[f.name] != null) gTot += gainDe(f, a.n);
+  });
+  $('stObj').textContent = gObj ? '+' + gTot + ' / +' + gObj : '—';
+  $('objFill').style.width = (gObj ? Math.min(100, gTot / gObj * 100) : 0) + '%';
 
   const ds = dates(avis);
   const totals = ds.map(d => Object.values(avis[d]).reduce((s,v) => s + (v && v.n ? v.n : 0), 0));
@@ -397,9 +485,8 @@ function render(){
 
 async function runAvis(){
   $('btnAvis').disabled = true;
-  // Une requete par vague de 12 fiches. En une seule requete, la fonction Netlify
-  // enchainait toutes les vagues et depassait sa limite de 10 s : elle etait tuee
-  // en cours de route et il fallait recliquer pour finir le relevé.
+  // Une requete par vague de 12 fiches : en une seule requete, la fonction Netlify
+  // depassait sa limite de 10 s et etait tuee en cours de route.
   const n = (DATA && DATA.fiches) ? DATA.fiches.length : 12;
   const vagues = [];
   for (let s = 0; s < n; s += 12) vagues.push(s);
@@ -423,7 +510,8 @@ async function runAvis(){
 }
 
 async function runRank(){
-  if(!confirm('Relever les classements maintenant ?')) return;
+  var rech = 0; (DATA ? DATA.fiches : []).forEach(function(f){ rech += kwsOf(f).length; });
+  if(!confirm('Relever les classements de toutes les fiches maintenant ? (' + rech + ' recherches SerpAPI)')) return;
   $('btnRank').disabled = true;
   const n = (DATA && DATA.fiches ? DATA.fiches.length : 43);
   const waves = [];
@@ -436,8 +524,7 @@ async function runRank(){
       msg('Classements déjà relevés récemment — prochain relevé possible dans ~' + j.cooldown + 'h');
       $('btnRank').disabled = false; return;
     }
-    // Le retour de chaque vague est lu : sans ca, une vague qui echoue (quota SerpAPI
-    // epuise, cle invalide) passait inapercue et le bouton annoncait "a jour".
+    // Le retour de chaque vague est lu : une vague qui echoue (quota SerpAPI, cle invalide) ne passe plus inapercue.
     let releves = 0, erreurs = 0, motif = null;
     const compte = async (rep) => {
       try { const j = await rep.json(); releves += (j.releves || 0); erreurs += (j.erreurs || 0); if (j.message) motif = j.message; }
@@ -450,13 +537,9 @@ async function runRank(){
       await load();
     }
     await load();
-    if (releves === 0) {
-      msg('Aucun classement relevé' + (motif ? ' — ' + motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
-    } else if (erreurs) {
-      msg(releves + ' fiche(s) relevée(s), ' + erreurs + ' en échec' + (motif ? ' — ' + motif : '') + '. Les autres gardent leur dernière position connue.');
-    } else {
-      msg('Classements à jour ✓ (' + releves + ' fiches)');
-    }
+    if (releves === 0) msg('Aucun classement relevé' + (motif ? ' — ' + motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
+    else if (erreurs) msg(releves + ' fiche(s) relevée(s), ' + erreurs + ' en échec' + (motif ? ' — ' + motif : '') + '. Les autres gardent leur dernière position connue.');
+    else msg('Classements à jour ✓ (' + releves + ' fiches)');
   }catch(e){ msg('Erreur pendant le relevé — recharge et réessaie'); }
   $('btnRank').disabled = false;
 }
@@ -474,7 +557,7 @@ function c3cell(name){
 }
 async function runC3(){
   const b=$('btnC3');b.disabled=true;
-  C3={};let nb=null;
+  C3={};
   const NN=DATA.fiches?DATA.fiches.length:0;
   let t0=0,t1=0,t2=0;
   for(let s=0;s<NN;s+=3){
@@ -491,6 +574,21 @@ async function runC3(){
     }catch(e){}
   }
   msg('3 jours ✓ — avant-hier '+t2+' · hier '+t1+' · aujourd\'hui '+t0+' (avis visibles sur Google)');
+  b.disabled=false;
+}
+async function recaleBase(){
+  if(!C3){msg('Lance d\'abord le comptage 3 jours.');return}
+  const deltas={};let tot=0;
+  for(const k in C3){const c=C3[k];if(c&&!c.err){const d=(c.j0||0)+(c.j1||0)+(c.j2||0);if(d>0){deltas[k]=d;tot+=d;}}}
+  if(!tot){msg('Rien à recaler — 0 avis comptés sur 3 jours.');return}
+  if(!confirm('Décaler la base de '+tot+' avis au total (les avis des 3 derniers jours comptent dans l\'objectif) ?'))return;
+  const b=$('btnRecale');b.disabled=true;msg('Recalage en cours…');
+  try{
+    const r=await fetch('/.netlify/functions/setbase',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({deltas})});
+    const j=await r.json();
+    if(j.ok){msg('Base recalée (-'+tot+') ✓ — rechargement…');await load();}
+    else msg('Erreur recalage');
+  }catch(e){msg('Erreur recalage : '+e)}
   b.disabled=false;
 }
 </script></body></html>
