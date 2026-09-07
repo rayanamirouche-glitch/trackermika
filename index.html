@@ -75,6 +75,16 @@ thead th.s.desc::after{content:'\2193'}
 .kwin:hover{border-color:var(--line);background:#fff}.kwin:focus{border-color:var(--terra);outline:none;background:#fff}.kwin.over{color:var(--terra);font-weight:700}.kwin:disabled{opacity:.5}
 .kwcell{display:flex;align-items:center;gap:4px}.kwrst{border:none;background:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:2px}.kwrst:hover{color:var(--terra)}
 .selbox{width:15px;height:15px;cursor:pointer;accent-color:var(--terra)}
+.btn-add{background:var(--ok);color:#fff}.btn-add:hover{background:#047857}
+.modal{display:none;position:fixed;inset:0;background:rgba(17,19,24,.55);z-index:40;padding:16px;overflow:auto}
+.modal .box{background:#fff;border-radius:16px;max-width:460px;margin:40px auto;padding:18px;border:1px solid var(--line)}
+.modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}.modal p{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);margin-bottom:12px}
+.modal label{display:block;font-family:'DM Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:10px 0 4px}
+.modal input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:.9rem}
+.modal input:focus{outline:none;border-color:var(--terra)}
+.modal .row{display:flex;gap:8px;margin-top:14px}.modal .row .btn{flex:1}
+.ajout{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--terra);margin-top:2px}
+.del{border:none;background:none;cursor:pointer;color:var(--muted);font-size:.7rem;padding:0 4px}.del:hover{color:var(--bad)}
 </style></head><body>
 <div class="header"><div class="logo">R.</div>
 <div class="h-t"><div class="h-name">Tracker Mika — Clim & PAC</div><div class="h-sub">avis Google + classement local géolocalisé · <span id="hNb">—</span> fiches · relevé manuel</div></div>
@@ -84,6 +94,7 @@ thead th.s.desc::after{content:'\2193'}
 <button class="btn btn-rank" id="btnRank" onclick="runRank()">📍 Classements</button>
 <button class="btn btn-sel" id="btnSel" onclick="runRankSel()" title="Coche des fiches dans le tableau, puis mesure leur classement (1 recherche SerpAPI par mot-clé et par fiche)">📍 Classement des cochées (0)</button>
 <button class="btn btn-rank" id="btnC3" onclick="runC3()">🗓 3 jours</button>
+<button class="btn btn-add" id="btnAdd" onclick="$('modal').style.display='block';$('a_n').focus()">+ Fiche</button>
 <button class="btn btn-rank" id="btnRecale" onclick="recaleBase()" style="display:none;border-color:#c2552b;color:#c2552b">⚖ Recaler la base</button>
 </div></div>
 <div class="msg" id="msg"></div>
@@ -109,6 +120,15 @@ thead th.s.desc::after{content:'\2193'}
 <tbody id="tbody"></tbody></table></div>
 <div class="foot">R.Consulting · avis relevés à la demande · classements à la demande · plusieurs mots-clés par fiche : sépare-les par « | »</div>
 </div>
+<div class="modal" id="modal"><div class="box">
+<h3>Ajouter une fiche</h3><p>Le nom tel qu'écrit sur Google, la ville, et le lien Maps de la fiche. Elle sera liée et suivie automatiquement.</p>
+<label>Nom de la fiche</label><input id="a_n" placeholder="ex : Couvreur Dupont Père & Fils">
+<label>Ville</label><input id="a_c" placeholder="ex : Antibes">
+<label>Lien Google Maps</label><input id="a_l" placeholder="https://maps.app.goo.gl/…">
+<label>Objectif (avis à gagner, facultatif)</label><input id="a_o" type="number" inputmode="numeric" placeholder="ex : 20">
+<label>Mot-clé de classement (facultatif)</label><input id="a_k" placeholder="ex : couvreur antibes — vide = automatique">
+<div class="row"><button class="btn btn-add" id="a_ok" onclick="ajouterFiche()">Ajouter</button><button class="btn btn-rank" onclick="$('modal').style.display='none'">Annuler</button></div>
+</div></div>
 <script>
 const admin = location.search.includes('admin');
 const $ = id => document.getElementById(id);
@@ -318,6 +338,35 @@ async function runRankSel(){
   updSelBtn();
 }
 
+// ── Fiches ajoutées depuis le tracker (par le client ou Rayan) ──
+// Stockées dans le blob 'ajouts' du tracker, liées à Google à l'ajout, remontées dans le ménage
+// par la routine du matin (scripts/ajouts_trackers.py). Suppression en ?admin seulement.
+async function ajouterFiche(){
+  const n = $('a_n').value.trim(), c = $('a_c').value.trim(), l = $('a_l').value.trim(), o = $('a_o').value.trim(), k = $('a_k').value.trim();
+  if (!n || !c || !l) { msg('Nom, ville et lien Maps sont obligatoires'); return; }
+  if (!/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+\/maps|maps\.google\.[a-z.]+)\//.test(l)) { msg('Le lien doit être un lien Google Maps (maps.app.goo.gl/… ou google.com/maps/…)'); return; }
+  const b = $('a_ok'); b.disabled = true; msg('Ajout et liaison de « ' + n + ' »…');
+  try {
+    const r = await fetch('/.netlify/functions/run?type=addfiche', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: n, city: c, link: l, obj: o, kw: k }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'échec');
+    ['a_n','a_c','a_l','a_o','a_k'].forEach(id => $(id).value = '');
+    $('modal').style.display = 'none';
+    await load();
+    msg('« ' + n + ' » ajoutée' + (j.lie ? ' et liée à Google (' + j.avis + ' avis aujourd\'hui, mot-clé « ' + j.kw + ' »)' : ' — fiche Google non trouvée automatiquement, elle sera liée plus tard') + ' ✓');
+  } catch (e) { msg('Ajout impossible — ' + e.message); }
+  b.disabled = false;
+}
+async function supprimerFiche(id, nom){
+  if (!admin) return;
+  if (!confirm('Retirer « ' + nom + ' » du tracker ?')) return;
+  try {
+    const r = await fetch('/.netlify/functions/run?type=delfiche', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || 'échec');
+    await load(); msg('« ' + nom + ' » retirée');
+  } catch (e) { msg('Suppression impossible — ' + e.message); }
+}
+
 // Rafraichit une seule fiche : un appel Google au lieu de tout le parc.
 async function refreshOne(btn){
   const i = parseInt(btn.dataset.i, 10);
@@ -432,7 +481,8 @@ function render(){
     }
     const alertCls = (!pid || dropped) ? ' class="alert"' : '';
     const _html = '<tr' + alertCls + '><td><input type="checkbox" class="selbox" data-i="' + i + '"' + (SEL.has(f.name) ? ' checked' : '') + ' onchange="toggleSel(this)"></td><td class="fcity">' + String(i+1).padStart(2,'0') + '</td>' +
-      '<td><a class="fname" href="' + mapsUrl + '" target="_blank" rel="noopener">' + f.name + '</a></td>' +
+      '<td><a class="fname" href="' + mapsUrl + '" target="_blank" rel="noopener">' + f.name + '</a>' +
+        (f.ajout ? '<div class="ajout">ajoutée le ' + (f.ajout.date || '') + (admin ? ' <button class="del" onclick="supprimerFiche(\'' + f.ajout.id + '\',\'' + escAttr(f.name).replace(/'/g, "\\'") + '\')" title="Retirer cette fiche (admin)">✕</button>' : '') + '</div>' : '') + '</td>' +
       '<td class="fcity">' + f.city + '</td><td>' + kwCell(f, i) + '</td><td>' + avisCell + '</td><td>' + star + '</td><td>' + posCell + '</td><td>' + objCell + '</td>' + c3cell(f.name) + '</tr>';
     const _hasObj = !!obj;
     const _gained = (_hasObj && BASE[f.name] != null && n != null) ? gainDe(f, n) : null;

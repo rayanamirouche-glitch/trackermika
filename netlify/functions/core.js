@@ -1,4 +1,17 @@
-const FICHES = require('./fiches.json');
+const FICHES_JSON = require('./fiches.json');
+let FICHES = FICHES_JSON.slice();
+// Fiches ajoutees depuis le tracker (bouton + Fiche, blob 'ajouts'). Une fiche ajoutee dont le lien
+// figure deja dans fiches.json (passee par le menage entre-temps) est ignoree : pas de doublon.
+const cleLien = l => { const m = /goo\.gl\/([A-Za-z0-9]+)/.exec(l || '') || /place_id[:=]([A-Za-z0-9_\-]+)/.exec(l || ''); return m ? m[1] : (l || ''); };
+async function chargerFiches() {
+  const aj = await getJSON('ajouts', {});
+  const connus = new Set(FICHES_JSON.map(f => cleLien(f.link)));
+  const noms = new Set(FICHES_JSON.map(f => f.name));
+  const extra = Object.keys(aj).sort().map(id => Object.assign({}, aj[id], { ajout: { id: id, date: aj[id].date || '' } }))
+    .filter(f => !connus.has(cleLien(f.link)) && !noms.has(f.name));
+  FICHES = FICHES_JSON.concat(extra);
+  return FICHES;
+}
 const REGION = 'IDF';
 const { getStore } = require('@netlify/blobs');
 
@@ -143,6 +156,7 @@ async function snapAvisWave(start) {
 // Relevé complet : enchaîne les vagues (utilisé par le snapshot nocturne et le bouton).
 // Sans résolution, 17 fiches ≈ 2 vague(s) × ~2 s, ça tient dans le budget.
 async function snapAvis(start) {
+  await chargerFiches();
   if (start !== null && start !== undefined && !isNaN(start)) {
     return snapAvisWave(start);
   }
@@ -209,6 +223,7 @@ async function rankFiches(list, K) {
 }
 
 async function snapRank(start, baseUrl) {
+  await chargerFiches();
   const K = process.env.SERPAPI_KEY;
   start = start || 0;
   const wave = FICHES.slice(start, start + WAVE);
@@ -226,6 +241,7 @@ async function snapRank(start, baseUrl) {
 // Ecrit dans 'rankbatch/<jour>/sel' et 'rankkw/<jour>/sel', fusionnes avec les releves manuels du jour,
 // sans toucher au cooldown du releve complet.
 async function snapRankSel(names) {
+  await chargerFiches();
   const K = process.env.SERPAPI_KEY;
   const voulu = new Set(names || []);
   const sel = FICHES.filter(f => voulu.has(f.name)).slice(0, WAVE);
@@ -289,11 +305,13 @@ async function rankKwHist() {
 }
 
 async function relink() {
+  await chargerFiches();
   await setJSON('ids', {});
   return resolveIds();
 }
 
 async function allData() {
+  await chargerFiches();
   const [avis, rank, ids, meta, base, kwover, objover, livover, rankKw] = await Promise.all([
     avisHist(), rankHist(), getJSON('ids', {}), getJSON('rankMeta', {}), getJSON('base', {}), kwOverrides(), getJSON('obj', {}), getJSON('livres', {}), rankKwHist()
   ]);
@@ -309,13 +327,14 @@ async function allData() {
     }
     return out;
   };
-  return { fiches: FICHES, region: REGION, avis: prune(avis), rank: prune(rank), ids, rankMeta: meta, base, kwover, objover, livover, rankKw };
+  return { fiches: FICHES, region: REGION, avis: prune(avis), rank: prune(rank), ids, rankMeta: meta, base, kwover, objover, livover, rankKw, ajouts: FICHES.filter(f => f.ajout).length };
 }
 
 // Releve d'une seule fiche, fusionne dans la cle de sa vague du jour.
 // Un seul appel Google (SKU Enterprise, ~0,02 $) : c'est le moyen de suivre
 // quelques fiches plusieurs fois par jour sans relever tout le parc.
 async function snapAvisOne(idx) {
+  await chargerFiches();
   const K = process.env.PLACES_API_KEY;
   const f = FICHES[idx];
   if (!f) return { ok: false, motif: 'fiche inconnue' };
@@ -337,4 +356,4 @@ async function snapAvisOne(idx) {
   return { ok: true, n: v.n, r: v.r };
 }
 
-module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, allData, rankCooldown, relink };
+module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch };

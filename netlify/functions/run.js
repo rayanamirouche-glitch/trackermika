@@ -1,10 +1,11 @@
 const { connectLambda } = require('@netlify/blobs');
 const { getStore } = require('@netlify/blobs');
 const core = require('./core');
-const FICHES = require('./fiches.json');
+let FICHES = require('./fiches.json');
 
 exports.handler = async (event) => {
   connectLambda(event);
+  FICHES = await core.chargerFiches();  // fiches.json + fiches ajoutees depuis le tracker
   const q = event.queryStringParameters || {};
   const baseUrl = process.env.URL || ('https://' + ((event.headers && event.headers.host) || ''));
   try {
@@ -27,6 +28,63 @@ exports.handler = async (event) => {
       await store.setJSON(blob, cur);
       const out = { ok: true }; out[blob] = cur;
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(out) };
+    }
+    if (q.type === 'addfiche') {
+      // Ajout d'une fiche depuis le tracker (client ou Rayan) : POST {name, city, link, obj, kw}.
+      // On cherche la fiche Google (nom + ville) pour la lier tout de suite, poser sa base au compteur du jour
+      // et prendre ses coordonnees ; sans resultat, elle est quand meme ajoutee, non liee.
+      let payload;
+      try { payload = JSON.parse(event.body || '{}'); } catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'body JSON invalide' }) }; }
+      const name = String(payload.name || '').trim(), city = String(payload.city || '').trim(), link = String(payload.link || '').trim();
+      if (!name || !city || !link) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: false, error: 'nom, ville et lien requis' }) };
+      if (!/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+\/maps|maps\.google\.[a-z.]+)\//.test(link)) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: false, error: 'lien Google Maps attendu' }) };
+      if (FICHES.some(f => f.name === name)) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: false, error: 'une fiche porte deja ce nom' }) };
+      const K = process.env.PLACES_API_KEY;
+      let hit = null;
+      try {
+        const j = await fetch('https://places.googleapis.com/v1/places:searchText', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.id,places.displayName,places.userRatingCount,places.location,places.formattedAddress' },
+          body: JSON.stringify({ textQuery: name + ' ' + city, languageCode: 'fr' })
+        }).then(r => r.json());
+        const t = core.normName(name.split(' ').slice(0, 3).join(' '));
+        const m = core.pickMatch(j.places || [], r => r.displayName && r.displayName.text, t);
+        hit = m ? m.hit : ((j.places || [])[0] || null);
+        if (hit && !m) { // premier resultat sans correspondance de nom : on ne lie pas, on garde juste la position
+          hit = { location: hit.location, id: null, userRatingCount: null };
+        }
+      } catch (e) {}
+      // mot-cle par defaut : metier dominant du tracker + ville
+      const compte = {};
+      FICHES.forEach(f => { const w = String(f.kw || '').split(' ')[0]; if (w) compte[w] = (compte[w] || 0) + 1; });
+      const metier = Object.keys(compte).sort((a, b) => compte[b] - compte[a])[0] || 'couvreur';
+      const villeKw = city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+      const kw = String(payload.kw || '').trim() || (metier + ' ' + villeKw);
+      const ll = (hit && hit.location) ? hit.location.latitude.toFixed(4) + ',' + hit.location.longitude.toFixed(4) : (FICHES[0] ? FICHES[0].ll : '');
+      const d = new Date(); const date = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      const obj = parseInt(payload.obj, 10);
+      const fiche = { name: name, q: name, target: name.split(' ').slice(0, 3).join(' ').toLowerCase(), ll: ll, kw: kw, city: city, link: link, region: FICHES[0] ? FICHES[0].region : '', date: date, par: 'tracker' };
+      if (!isNaN(obj) && obj > 0) fiche.obj = obj;
+      const store = getStore('tracker');
+      const aj = (await store.get('ajouts', { type: 'json' })) || {};
+      const id = 'a' + Date.now();
+      aj[id] = fiche; await store.setJSON('ajouts', aj);
+      if (hit && hit.id) {
+        const ids = (await store.get('ids', { type: 'json' })) || {}; ids[name] = hit.id; await store.setJSON('ids', ids);
+        const base = (await store.get('base', { type: 'json' })) || {}; base[name] = typeof hit.userRatingCount === 'number' ? hit.userRatingCount : 0; await store.setJSON('base', base);
+      }
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: true, id: id, lie: !!(hit && hit.id), avis: hit && typeof hit.userRatingCount === 'number' ? hit.userRatingCount : null, kw: kw, adresse: hit ? hit.formattedAddress : null }) };
+    }
+    if (q.type === 'delfiche') {
+      let payload;
+      try { payload = JSON.parse(event.body || '{}'); } catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'body JSON invalide' }) }; }
+      const store = getStore('tracker');
+      const aj = (await store.get('ajouts', { type: 'json' })) || {};
+      const f = aj[payload.id];
+      if (!f) return { statusCode: 400, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: false, error: 'ajout inconnu' }) };
+      delete aj[payload.id]; await store.setJSON('ajouts', aj);
+      for (const k of ['ids', 'base', 'kw', 'obj', 'livres']) { const b = (await store.get(k, { type: 'json' })) || {}; if (f.name in b) { delete b[f.name]; await store.setJSON(k, b); } }
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: true }) };
     }
     if (q.type === 'rankselect') {
       // Classement des seules fiches cochees (POST {names:[...]}, 10 max par appel).
