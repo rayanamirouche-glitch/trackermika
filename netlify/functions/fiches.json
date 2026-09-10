@@ -256,7 +256,7 @@
   "ll": "48.8767,2.1963",
   "kw": "depannage pompe a chaleur 92",
   "city": "Rueil-Malmaison",
-  "link": "https://maps.app.goo.gl/VqzXz6yp82jLXTYp6",
+  "link": "https://maps.app.goo.gl/dje9vAepgZgFJoc97",
   "region": "IDF"
  },
  {
@@ -377,6 +377,26 @@
   "kw": "depannage pompe a chaleur 77",
   "city": "Meaux",
   "link": "https://maps.app.goo.gl/wbpo8LibX9Tnamqo6",
+  "region": "IDF"
+ },
+ {
+  "name": "bora entretien et dépannage pompe à chaleur chantilly 60",
+  "q": "bora entretien et dépannage pompe à chaleur chantilly 60",
+  "target": "bora entretien et",
+  "ll": "49.194,2.471",
+  "kw": "depannage pompe a chaleur 60",
+  "city": "Chantilly",
+  "link": "https://maps.app.goo.gl/9u2wejQ5ntPUTd2Y7",
+  "region": "Oise"
+ },
+ {
+  "name": "Kodensia depannage entretien chaudière Paris",
+  "q": "Kodensia depannage entretien chaudière Paris",
+  "target": "kodensia depannage entretien",
+  "ll": "48.840,2.300",
+  "kw": "depannage chaudiere paris",
+  "city": "Paris",
+  "link": "https://maps.app.goo.gl/3AD6AnbFpr7KZL6EA",
   "region": "IDF"
  }
 ]
