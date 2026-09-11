@@ -2,6 +2,9 @@
 <title>Tracker Mika — Clim & PAC — R.Consulting</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+<link rel="stylesheet" href="/portal.css">
+<script src="/portal.js" defer></script>
 <style>
 :root{--ink:#111318;--muted:#9a9ea8;--line:#e2e3e6;--terra:#c2552b;--bg:#fafafa;--card:#fff;--ok:#059669;--warn:#f59e0b;--bad:#dc2626}
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);padding-bottom:60px}
@@ -123,6 +126,11 @@ thead th.s.desc::after{content:'\2193'}
 </div></div></div>
 <div class="msg" id="msg"></div>
 <div class="wrap">
+<nav class="portal-tabs" role="tablist" aria-label="Navigation du tracker">
+<button class="portal-tab active" type="button" role="tab" aria-selected="true" data-view="suivi" onclick="showPortalView('suivi')"><i data-lucide="chart-no-axes-combined"></i>Suivi</button>
+<button class="portal-tab" type="button" role="tab" aria-selected="false" data-view="commandes" onclick="showPortalView('commandes')"><i data-lucide="shopping-bag"></i>Commander <span class="order-badge" id="orderBadge" hidden>0</span></button>
+</nav>
+<section class="portal-view" id="trackingView">
 <div class="stats">
 <div class="stat"><div class="stat-lbl">Total avis</div><div class="stat-val" id="stTotal">—</div></div>
 <div class="stat"><div class="stat-lbl">Avis auj.</div><div class="stat-val" id="stDay">—</div></div>
@@ -142,7 +150,39 @@ thead th.s.desc::after{content:'\2193'}
 </div>
 <div style="overflow-x:auto"><table><thead><tr><th><input type="checkbox" class="selbox" id="selAll" onchange="selAllVisible(this.checked)" title="Cocher / décocher les fiches affichées"></th><th>#</th><th>Fiche</th><th>Ville</th><th>Mots-clés de classement</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th class="s" data-k="pct" onclick="setS('pct')">Objectif</th><th>J-2·J-1·J</th></tr></thead>
 <tbody id="tbody"></tbody></table></div>
-<div class="foot">R.Consulting · avis relevés à la demande · classements à la demande · plusieurs mots-clés par fiche : sépare-les par « | »</div>
+<div class="foot">R.Consulting · suivi des fiches Google Business Profile</div>
+</section>
+<section class="portal-view" id="ordersView" hidden>
+<div class="section-heading"><div><h2>Passer une commande</h2><p>La demande est enregistrée directement dans votre tracker.</p></div></div>
+<div class="order-layout">
+<form class="order-form" id="orderForm">
+<h3>Nouvelle demande</h3>
+<div class="order-types" role="group" aria-label="Type de commande">
+<button class="order-type active" type="button" data-type="avis" aria-pressed="true">Avis Google</button>
+<button class="order-type" type="button" data-type="fiche" aria-pressed="false">Nouvelle fiche Google</button>
+</div>
+<input id="orderType" type="hidden" value="avis">
+<div class="form-grid">
+<label class="field field-wide" id="existingListingField"><span>Fiche concernée</span><select id="orderListing"><option value="">Choisir une fiche</option></select></label>
+<label class="field"><span>Ville ou zone</span><input id="orderCity" maxlength="120" required placeholder="Ex. Nice"></label>
+<label class="field"><span>Domaine d’activité</span><input id="orderActivity" maxlength="100" list="activitySuggestions" required placeholder="Ex. Couvreur"></label>
+<datalist id="activitySuggestions"><option value="Couvreur"><option value="Chauffagiste"><option value="Climatisation"><option value="Pompe à chaleur"><option value="Dératisation"><option value="Élagage"><option value="Façadier"><option value="Terrassement"></datalist>
+<div class="site-line"><span>Un site internet existe déjà</span><label class="switch"><input id="orderHasSite" type="checkbox" aria-label="Un site internet existe déjà"><span></span></label></div>
+<label class="field field-wide" id="siteUrlField" hidden><span>Adresse du site</span><input id="orderSiteUrl" type="url" maxlength="300" placeholder="https://..."></label>
+<div class="quantities">
+<label class="field"><span>Nombre de fiches</span><input id="orderListingCount" type="number" min="1" max="100" value="1" inputmode="numeric"></label>
+<label class="field"><span>Nombre d’avis</span><input id="orderComments" type="number" min="0" max="500" value="20" inputmode="numeric"></label>
+<label class="field"><span>Nombre de photos</span><input id="orderPhotos" type="number" min="0" max="200" value="5" inputmode="numeric"></label>
+</div>
+<label class="field field-wide"><span>Précisions</span><textarea id="orderNotes" maxlength="1200" placeholder="Nom souhaité, zones secondaires, délai, informations utiles…"></textarea></label>
+<label class="bot-field" aria-hidden="true">Site web<input id="orderWebsite" tabindex="-1" autocomplete="off"></label>
+<div class="order-summary" id="orderSummary"></div>
+<div class="order-actions"><button class="order-submit" id="orderSubmit" type="submit"><i data-lucide="send"></i>Envoyer la demande</button><span class="order-feedback" id="orderFeedback" role="status" aria-live="polite"></span></div>
+</div>
+</form>
+<aside class="order-history"><h3>Mes demandes</h3><div class="order-list" id="orderList"><div class="order-empty">Chargement…</div></div></aside>
+</div>
+</section>
 </div>
 <div class="modal" id="modal"><div class="box">
 <h3>Ajouter une fiche</h3><p>Le nom tel qu'écrit sur Google, la ville, et le lien Maps de la fiche. Elle sera liée et suivie automatiquement.</p>
@@ -155,6 +195,7 @@ thead th.s.desc::after{content:'\2193'}
 </div></div>
 <script>
 const admin = location.search.includes('admin');
+window.TRACKER_ADMIN = admin;
 const $ = id => document.getElementById(id);
 function msg(t){ $('msg').textContent = t || '' }
 let DATA = null, chart = null;
@@ -168,6 +209,7 @@ async function load(){
     DATA = await r.json();
     KW = DATA.kwover || {}; OBJ = DATA.objover || {}; LIV = DATA.livover || {}; RKW = DATA.rankKw || {};
     render();
+    if (window.portalAfterData) window.portalAfterData(DATA);
   }catch(e){ msg('Erreur de chargement — réessaie dans une minute') }
 }
 
@@ -255,6 +297,7 @@ function buildMetiers(rows){
 
 // ── Mots-clés, sélection, objectif et postés modifiables ──
 function kwCell(f, i){
+  if (!admin) return '<span class="kwread">' + escAttr(kwEff(f)) + '</span>';
   var over = !!KW[f.name];
   var h = '<div class="kwcell"><input class="kwin' + (over ? ' over' : '') + '" data-i="' + i + '" value="' + escAttr(kwEff(f)) + '"' +
     ' onchange="saveKw(this)" onkeydown="if(event.key===\'Enter\')this.blur()"' +
@@ -460,7 +503,7 @@ function render(){
       avisCell = '<b title="Total actuel sur Google">' + n + '</b>';
       if (dAvis) avisCell += '<span class="delta ' + (dAvis > 0 ? 'up' : 'down') + '">' + (dAvis > 0 ? '+' : '') + dAvis + '</span>';
       if (dropped) avisCell += ' <span class="unlinked">⚠</span>';
-      avisCell += ' <button class="rf" data-i="' + i + '" onclick="refreshOne(this)" title="Actualiser cette fiche seule (1 appel Google)">↻</button>';
+      if (admin) avisCell += ' <button class="rf" data-i="' + i + '" onclick="refreshOne(this)" title="Actualiser cette fiche seule (1 appel Google)">↻</button>';
     }
     // Trois chiffres clairs : Google (total), Postés (+N), Perdus (−M anciens, seulement si négatif)
     const postes = postesDe(f);
@@ -496,12 +539,12 @@ function render(){
       const pct = Math.min(100, Math.round(gained / obj * 100));
       const doneCls = gained >= obj ? ' done' : '';
       const fillCls = gained >= obj ? '' : ' part';
-      objCell = '<div class="objcell" onclick="editObj(' + i + ')" title="Clique pour modifier l\'objectif"><span class="objtxt' + doneCls + '">+' + gained + ' / +' + obj + (gained >= obj ? ' ✓' : '') + '</span>' + objMan +
+      objCell = '<div class="objcell"' + (admin ? ' onclick="editObj(' + i + ')" title="Modifier l\'objectif"' : '') + '><span class="objtxt' + doneCls + '">+' + gained + ' / +' + obj + (gained >= obj ? ' ✓' : '') + '</span>' + objMan +
         '<div class="minibar"><div class="minifill' + fillCls + '" style="width:' + pct + '%"></div></div></div>';
     } else if (obj) {
-      objCell = '<div class="objcell" onclick="editObj(' + i + ')" title="Clique pour modifier l\'objectif"><span class="fcity">+0 / +' + obj + '</span>' + objMan + '</div>';
+      objCell = '<div class="objcell"' + (admin ? ' onclick="editObj(' + i + ')" title="Modifier l\'objectif"' : '') + '><span class="fcity">+0 / +' + obj + '</span>' + objMan + '</div>';
     } else {
-      objCell = '<div class="objcell" onclick="editObj(' + i + ')" title="Clique pour fixer un objectif"><span class="fcity">— ✎</span></div>';
+      objCell = admin ? '<div class="objcell" onclick="editObj(' + i + ')" title="Fixer un objectif"><span class="fcity">— ✎</span></div>' : '<span class="fcity">—</span>';
     }
     const alertCls = (!pid || dropped) ? ' class="alert"' : '';
     const _html = '<tr' + alertCls + '><td class="c-sel"><input type="checkbox" class="selbox" data-i="' + i + '"' + (SEL.has(f.name) ? ' checked' : '') + ' onchange="toggleSel(this)"></td><td class="fcity c-num">' + String(i+1).padStart(2,'0') + '</td>' +
