@@ -180,6 +180,7 @@
 
   window.portalAfterData = function (data) {
     populateListings(data);
+    iconRefresh();
   };
 
   function init() {

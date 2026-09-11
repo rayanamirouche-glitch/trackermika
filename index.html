@@ -148,7 +148,7 @@ thead th.s.desc::after{content:'\2193'}
 <button class="chip ok" data-f="top3" onclick="setF('top3')">Top 3<b id="cTop3">0</b></button>
 <button class="chip bad" data-f="rankbad" onclick="setF('rankbad')">Classement à travailler<b id="cRankBad">0</b></button>
 </div>
-<div style="overflow-x:auto"><table><thead><tr><th><input type="checkbox" class="selbox" id="selAll" onchange="selAllVisible(this.checked)" title="Cocher / décocher les fiches affichées"></th><th>#</th><th>Fiche</th><th>Ville</th><th>Mots-clés de classement</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th class="s" data-k="pct" onclick="setS('pct')">Objectif</th><th>J-2·J-1·J</th></tr></thead>
+<div style="overflow-x:auto"><table><thead><tr><th><input type="checkbox" class="selbox" id="selAll" onchange="selAllVisible(this.checked)" title="Cocher / décocher les fiches affichées"></th><th>#</th><th>Fiche</th><th>Ville</th><th>Mots-clés de classement</th><th class="s" data-k="n" onclick="setS('n')">Avis</th><th class="s" data-k="note" onclick="setS('note')">⭐</th><th class="s" data-k="pos" onclick="setS('pos')">Position</th><th class="s" data-k="pct" onclick="setS('pct')">Objectif</th><th>J-2·J-1·J</th><th class="c-admin">Réglages</th></tr></thead>
 <tbody id="tbody"></tbody></table></div>
 <div class="foot">R.Consulting · suivi des fiches Google Business Profile</div>
 </section>
@@ -193,6 +193,17 @@ thead th.s.desc::after{content:'\2193'}
 <label>Mot-clé de classement (facultatif)</label><input id="a_k" placeholder="ex : couvreur antibes — vide = automatique">
 <div class="row"><button class="btn btn-add" id="a_ok" onclick="ajouterFiche()">Ajouter</button><button class="btn btn-rank" onclick="$('modal').style.display='none'">Annuler</button></div>
 </div></div>
+<div class="modal settings-modal" id="settingsModal"><div class="box">
+<h3>Réglages de la fiche</h3><p id="s_name"></p>
+<div class="settings-context" id="s_context"></div>
+<div class="settings-grid">
+<div class="settings-wide"><label for="s_kw">Mots-clés de classement</label><input id="s_kw" placeholder="couvreur nice | toiture nice | couvreur 06"></div>
+<div><label for="s_obj">Objectif d’avis</label><input id="s_obj" type="number" min="0" inputmode="numeric" placeholder="ex : 30"></div>
+<div><label for="s_liv">Avis réellement postés</label><input id="s_liv" type="number" min="0" inputmode="numeric" placeholder="ex : 12"></div>
+</div>
+<div class="settings-error" id="s_error" role="alert"></div>
+<div class="row"><button class="btn btn-add" id="s_ok" onclick="saveSettings()">Enregistrer</button><button class="btn btn-rank" onclick="closeSettings()">Annuler</button></div>
+</div></div>
 <script>
 const admin = location.search.includes('admin');
 window.TRACKER_ADMIN = admin;
@@ -217,6 +228,7 @@ var ROWS = [], FILT = 'all', MET = 'all', SORT = null, SDIR = 1, Q = '';
 // KW : mots-clés choisis dans le tableau (blob 'kw', « kw1 | kw2 »), OBJ : objectifs modifiés (blob 'obj'),
 // LIV : postés corrigés à la main (blob 'livres', admin), RKW : dernière position connue par mot-clé, SEL : fiches cochées.
 var KW = {}, OBJ = {}, LIV = {}, RKW = {}, SEL = new Set();
+var SETTINGS_I = null;
 function escAttr(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function norm(s){ return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function kwsOf(f){ return String(KW[f.name] || f.kw || '').split(/\s*[|;]\s*/).map(x => x.trim()).filter(Boolean).slice(0, 3); }
@@ -256,7 +268,7 @@ function applyView(){
   }
   document.getElementById('tbody').innerHTML = v.length
     ? v.map(function(r){ return r.html; }).join('')
-    : '<tr><td colspan="10" class="empty">aucune fiche ne correspond</td></tr>';
+    : '<tr><td colspan="11" class="empty">aucune fiche ne correspond</td></tr>';
   var all = document.getElementById('selAll'); if (all) all.checked = v.length > 0 && v.every(function(r){ return SEL.has(r.name); });
 }
 
@@ -331,6 +343,7 @@ async function postOver(type, body){
   return j;
 }
 async function saveKw(inp){
+  if (!admin) return;
   const f = DATA.fiches[parseInt(inp.dataset.i, 10)];
   const v = inp.value.split(/\s*[|;]\s*/).map(x => x.trim()).filter(Boolean).slice(0, 3).join(' | ');
   if (!v) { inp.value = kwEff(f); return; }
@@ -346,13 +359,15 @@ async function saveKw(inp){
   } catch (e) { msg('Mots-clés non enregistrés — ' + e.message); inp.disabled = false; inp.focus(); }
 }
 async function resetKw(btn){
+  if (!admin) return;
   const f = DATA.fiches[parseInt(btn.dataset.i, 10)];
   btn.disabled = true;
   try { const j = await postOver('setkw', { clear: [f.name] }); KW = j.kw || {}; render(); msg('« ' + f.name + ' » → mot-clé du fichier : ' + f.kw); }
   catch (e) { msg('Réinitialisation impossible — ' + e.message); btn.disabled = false; }
 }
-// Objectif : modifiable par tout le monde (Rayan et son client). Vide = revenir à la valeur du fichier.
+// Objectif : réservé au mode administrateur. Vide = revenir à la valeur du fichier.
 async function editObj(i){
+  if (!admin) return;
   const f = DATA.fiches[i];
   const cur = objEff(f);
   const v = window.prompt('Objectif de « ' + f.name + ' » (nombre d\'avis à gagner) :', cur || '');
@@ -380,6 +395,69 @@ async function editLiv(i){
     else { const set = {}; set[f.name] = n; const j = await postOver('setliv', { set: set }); LIV = j.livres || {}; }
     render(); msg('Postés de « ' + f.name + ' » : ' + (livEff(f) != null ? '+' + livEff(f) : '—') + ' ✓');
   } catch (e) { msg('Non enregistré — ' + e.message); }
+}
+
+function openSettings(i){
+  if (!admin || !DATA || !DATA.fiches[i]) return;
+  const f = DATA.fiches[i];
+  SETTINGS_I = i;
+  $('s_name').textContent = f.name + ' · ' + (f.city || '');
+  $('s_kw').value = kwEff(f);
+  $('s_obj').value = objEff(f) || '';
+  $('s_liv').value = livEff(f) != null ? livEff(f) : '';
+  const row = ROWS[i];
+  $('s_context').textContent = 'Google : ' + (row && row.n != null ? row.n + ' avis' : 'total indisponible') + ' · position : ' + (row && row.pos != null ? '#' + row.pos : 'non relevée');
+  $('s_error').textContent = '';
+  $('settingsModal').style.display = 'block';
+  $('s_kw').focus();
+}
+
+function closeSettings(){
+  $('settingsModal').style.display = 'none';
+  SETTINGS_I = null;
+}
+
+function optionalCount(id){
+  const raw = $(id).value.trim();
+  if (raw === '') return null;
+  const value = parseInt(raw, 10);
+  return isNaN(value) || value < 0 ? NaN : value;
+}
+
+async function saveSettings(){
+  if (!admin || SETTINGS_I === null || !DATA.fiches[SETTINGS_I]) return;
+  const f = DATA.fiches[SETTINGS_I];
+  const keywords = $('s_kw').value.split(/\s*[|;]\s*/).map(x => x.trim()).filter(Boolean).slice(0, 3).join(' | ');
+  const objective = optionalCount('s_obj');
+  const posted = optionalCount('s_liv');
+  if (!keywords) { $('s_error').textContent = 'Ajoute au moins un mot-clé.'; return; }
+  if (Number.isNaN(objective) || Number.isNaN(posted)) { $('s_error').textContent = 'L’objectif et les avis postés doivent être des nombres positifs.'; return; }
+
+  const keywordBody = keywords === f.kw ? { clear: [f.name] } : { set: { [f.name]: keywords } };
+  const objectiveBody = objective === null || objective === Number(f.obj || 0) ? { clear: [f.name] } : { set: { [f.name]: objective } };
+  const postedBody = posted === null ? { clear: [f.name] } : { set: { [f.name]: posted } };
+  const button = $('s_ok');
+  button.disabled = true;
+  $('s_error').textContent = '';
+  msg('Enregistrement des réglages de « ' + f.name + ' »…');
+  try {
+    const results = await Promise.all([
+      postOver('setkw', keywordBody),
+      postOver('setobj', objectiveBody),
+      postOver('setliv', postedBody)
+    ]);
+    KW = results[0].kw || {};
+    OBJ = results[1].obj || {};
+    LIV = results[2].livres || {};
+    SEL.add(f.name);
+    closeSettings();
+    render();
+    msg('Réglages enregistrés ✓ · la fiche est cochée pour relever son nouveau classement');
+  } catch (e) {
+    $('s_error').textContent = 'Enregistrement impossible : ' + e.message;
+    msg('Réglages non enregistrés');
+  }
+  button.disabled = false;
 }
 async function runRankSel(){
   const names = DATA.fiches.map(function(f){ return f.name; }).filter(function(n){ return SEL.has(n); });
@@ -550,7 +628,8 @@ function render(){
     const _html = '<tr' + alertCls + '><td class="c-sel"><input type="checkbox" class="selbox" data-i="' + i + '"' + (SEL.has(f.name) ? ' checked' : '') + ' onchange="toggleSel(this)"></td><td class="fcity c-num">' + String(i+1).padStart(2,'0') + '</td>' +
       '<td class="c-nom"><a class="fname" href="' + mapsUrl + '" target="_blank" rel="noopener">' + f.name + '</a>' +
         (f.ajout ? '<div class="ajout">ajoutée le ' + (f.ajout.date || '') + (admin ? ' <button class="del" onclick="supprimerFiche(\'' + f.ajout.id + '\',\'' + escAttr(f.name).replace(/'/g, "\\'") + '\')" title="Retirer cette fiche (admin)">✕</button>' : '') + '</div>' : '') + '</td>' +
-      '<td class="fcity" data-label="Ville">' + f.city + '</td><td class="c-kw" data-label="Mots-clés">' + kwCell(f, i) + '</td><td data-label="Avis">' + avisCell + '</td><td data-label="Note">' + star + '</td><td data-label="Position">' + posCell + '</td><td data-label="Objectif">' + objCell + '</td>' + c3cell(f.name) + '</tr>';
+      '<td class="fcity" data-label="Ville">' + f.city + '</td><td class="c-kw" data-label="Mots-clés">' + kwCell(f, i) + '</td><td data-label="Avis">' + avisCell + '</td><td data-label="Note">' + star + '</td><td data-label="Position">' + posCell + '</td><td data-label="Objectif">' + objCell + '</td>' + c3cell(f.name) +
+      (admin ? '<td class="c-admin" data-label="Réglages"><button class="settings-btn" onclick="openSettings(' + i + ')" title="Modifier les mots-clés, l’objectif et les avis postés" aria-label="Réglages de ' + escAttr(f.name) + '"><i data-lucide="settings-2"></i></button></td>' : '') + '</tr>';
     const _hasObj = !!obj;
     const _gained = (_hasObj && BASE[f.name] != null && n != null) ? gainDe(f, n) : null;
     return { html: _html, name: f.name, metier: metierOf(kws[0] || f.kw), pos: pos, n: n, note: (a && a.r) ? a.r : null,
@@ -598,6 +677,7 @@ function render(){
     data: { labels: ds, datasets: [{ label: 'Total avis du réseau', data: totals, borderColor: '#c2552b', backgroundColor: 'rgba(194,85,43,.08)', fill: true, tension: .3, pointRadius: 3 }] },
     options: { plugins: { legend: { labels: { font: { family: 'DM Mono', size: 10 } } } }, scales: { x: { ticks: { font: { family: 'DM Mono', size: 9 } } }, y: { ticks: { font: { family: 'DM Mono', size: 9 } } } } }
   });
+  if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
 }
 
 async function runAvis(){
