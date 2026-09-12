@@ -215,6 +215,17 @@ exports.handler = async (event) => {
       }).then(r => r.json());
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ fiche: f.name, results: (j.places || []).slice(0, 8) }, null, 1) };
     }
+    if (q.type === 'setobj') {
+      if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'POST attendu' }) };
+      const payload = JSON.parse(event.body || '{}');
+      const store = getStore('tracker');
+      const obj = (await store.get('obj', { type: 'json' }).catch(() => null)) || {};
+      const set = payload.set || {}; const clear = payload.clear || [];
+      for (const n of Object.keys(set)) { const v = Number(set[n]); if (Number.isFinite(v)) obj[n] = v; }
+      for (const n of clear) delete obj[n];
+      await store.setJSON('obj', obj);
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: true, obj }) };
+    }
     if (q.type === 'setids') {
       // Ecriture batch : un seul read-modify-write, sinon les appels concurrents
       // s'ecrasent (le blob store est eventuellement coherent).
