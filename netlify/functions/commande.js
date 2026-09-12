@@ -22,14 +22,13 @@ exports.handler = async (event) => {
     note: String(b.note || '').slice(0, 300), statut: 'nouvelle', date: new Date().toISOString(), postes: 0, payees: 0 };
   const r = await fetch(FB + id + '.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cmd) });
   if (!r.ok) return { statusCode: 502, headers: H, body: JSON.stringify({ error: 'enregistrement impossible (' + r.status + ')' }) };
+  // Notification WhatsApp : relais unique sur le site ménage (les clés n'existent que là).
   let notif = false;
-  if (process.env.CALLMEBOT_PHONE && process.env.CALLMEBOT_KEY) {
-    const txt = `Nouvelle commande — ${cmd.client || site}\n${cmd.fiche} (${cmd.ville})\n${total} com · ${parJour}/j` + (ph ? ` · ${ph} avec ${ppc} photo${ppc > 1 ? 's' : ''}` : '') +
-      `\n${prix} € · ${tranches} tranche${tranches > 1 ? 's' : ''} de 20 · 1re ${premiere} €\ndébut ${cmd.debut}` + (cmd.note ? `\n« ${cmd.note} »` : '');
-    try {
-      const u = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(process.env.CALLMEBOT_PHONE) + '&apikey=' + encodeURIComponent(process.env.CALLMEBOT_KEY) + '&text=' + encodeURIComponent(txt);
-      const n = await fetch(u); notif = n.ok;
-    } catch (e) { notif = false; }
-  }
+  const txt = `Nouvelle commande — ${cmd.client || site}\n${cmd.fiche} (${cmd.ville})\n${total} com · ${parJour}/j` + (ph ? ` · ${ph} avec ${ppc} photo${ppc > 1 ? 's' : ''}` : '') +
+    `\n${prix} € · ${tranches} tranche${tranches > 1 ? 's' : ''} de 20 · 1re ${premiere} €\ndébut ${cmd.debut}` + (cmd.note ? `\n« ${cmd.note} »` : '');
+  try {
+    const n = await fetch('https://menageinformatique.netlify.app/.netlify/functions/notif', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt }) });
+    const nj = await n.json().catch(() => ({})); notif = !!nj.envoye;
+  } catch (e) { notif = false; }
   return { statusCode: 200, headers: H, body: JSON.stringify({ ok: true, id, prix, tranches, premiere, notif }) };
 };
