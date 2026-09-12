@@ -6,6 +6,22 @@ const FB = 'https://avis-tracker-default-rtdb.europe-west1.firebasedatabase.app/
 const CFG = 'https://avis-tracker-default-rtdb.europe-west1.firebasedatabase.app/config_v1.json';
 async function tranche() { try { const c = await fetch(CFG).then(r => r.json()); const t = parseInt(c && c.tranche, 10); return t > 0 ? t : 20; } catch (e) { return 20; } }
 const H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Content-Type': 'application/json' };
+const { connectLambda, getStore } = require('@netlify/blobs');
+let FICHES = []; try { FICHES = require('./fiches.json'); } catch (e) { FICHES = []; }
+
+// Une commande sur une fiche déjà suivie augmente son objectif d'autant (blob 'obj' du tracker, lu par la jauge).
+async function augmenterObjectif(event, fiche, total) {
+  try {
+    connectLambda(event);
+    const store = getStore('tracker');
+    const f = FICHES.find(x => x.name === fiche); if (!f) return null;
+    const obj = (await store.get('obj', { type: 'json' }).catch(() => null)) || {};
+    const actuel = (obj[f.name] != null && obj[f.name] !== '') ? Number(obj[f.name]) : (f.obj ? Number(f.obj) : 0);
+    obj[f.name] = actuel + total;
+    await store.setJSON('obj', obj);
+    return obj[f.name];
+  } catch (e) { return null; }
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: H, body: '' };
@@ -25,6 +41,7 @@ exports.handler = async (event) => {
     note: String(b.note || '').slice(0, 300), statut: 'nouvelle', date: new Date().toISOString(), postes: 0, payees: 0 };
   const r = await fetch(FB + id + '.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cmd) });
   if (!r.ok) return { statusCode: 502, headers: H, body: JSON.stringify({ error: 'enregistrement impossible (' + r.status + ')' }) };
+  const nouvelObjectif = await augmenterObjectif(event, cmd.fiche, total);
   // Notification WhatsApp : relais unique sur le site ménage (les clés n'existent que là).
   let notif = false;
   const txt = `Nouvelle commande — ${cmd.client || site}\n${cmd.fiche} (${cmd.ville})\n${total} com · ${parJour}/j` + (ph ? ` · ${ph} avec ${ppc} photo${ppc > 1 ? 's' : ''}` : '') +
@@ -33,5 +50,5 @@ exports.handler = async (event) => {
     const n = await fetch('https://menageinformatique.netlify.app/.netlify/functions/notif', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt }) });
     const nj = await n.json().catch(() => ({})); notif = !!nj.envoye;
   } catch (e) { notif = false; }
-  return { statusCode: 200, headers: H, body: JSON.stringify({ ok: true, id, prix, tranches, premiere, notif }) };
+  return { statusCode: 200, headers: H, body: JSON.stringify({ ok: true, id, prix, tranches, premiere, notif, objectif: nouvelObjectif }) };
 };
