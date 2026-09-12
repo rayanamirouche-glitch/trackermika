@@ -151,9 +151,9 @@ exports.handler = async (event) => {
       if (!f) return { statusCode: 400, body: JSON.stringify({ error: 'index hors bornes', total: FICHES.length }) };
       const over = (await getStore('tracker').get('kw', { type: 'json' }).catch(() => null)) || {};
       const kwEff = q.kw || String(over[f.name] || f.kw).split(/\s*[|;]\s*/)[0].trim();
-      const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kwEff) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
+      const u = 'https://serpapi.com/search.json?engine=google&q=' + encodeURIComponent(kwEff) + '&lat=' + encodeURIComponent(String(f.ll).split(',')[0]) + '&lon=' + encodeURIComponent(String(f.ll).split(',')[1]) + '&device=mobile&hl=fr&gl=' + core.paysDe(f) + '&google_domain=google.' + core.paysDe(f) + '&no_cache=true&api_key=' + K;
       const j = await fetch(u).then(r => r.json()).catch(e => ({ fetch_error: String(e) }));
-      const rs = (j && j.local_results) || [];
+      const rs = ((j && j.local_results && j.local_results.places) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad'));
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({
         fiche: f.name, index: i, kw: kwEff, kw_fichier: f.kw, ll: f.ll,
         cle_serpapi_presente: !!K,

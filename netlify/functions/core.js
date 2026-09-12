@@ -187,15 +187,30 @@ function kwsOf(f, over) {
 }
 
 // Une recherche SerpAPI pour une fiche et un mot-cle : position dans le pack local, ou {error}.
+// Pays de la recherche : d'abord le libelle de region, sinon la longitude (Suisse a l'est de 6,8).
+function paysDe(f) {
+  const r = String(f.region || f.city || '');
+  if (/belg|brux|brabant|bxl|li[eè]ge|wallon|flandre|vlaan/i.test(r)) return 'be';
+  if (/suisse|schweiz|gen[eè]ve|vaud|valais|bern|oberland|meiringen|ch/i.test(r)) return 'ch';
+  const [lat, lon] = String(f.ll || '').split(',').map(Number);
+  if (lat > 45.8 && lat < 47.9 && lon > 6.8) return 'ch';
+  return 'fr';
+}
+// Position dans le bloc local de GOOGLE RECHERCHE (mobile), vu depuis la ville de la fiche :
+// c'est ce qu'un client voit quand il tape « couvreur nice ». (Avant le 12/09/2026 : Google Maps.)
 async function serpPos(f, kw, K) {
-  const u = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kw) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&api_key=' + K;
+  const [lat, lon] = String(f.ll || '').split(',');
+  const gl = paysDe(f);
+  const u = 'https://serpapi.com/search.json?engine=google&q=' + encodeURIComponent(kw) + '&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon)
+    + '&device=mobile&hl=fr&gl=' + gl + '&google_domain=google.' + gl + '&no_cache=true&api_key=' + K;
   const j = await to(fetch(u).then(r => r.json()), 8500);
   // SerpAPI en erreur (quota epuise, cle invalide) renvoie {error}. Sans ce test on enregistrait
-  // « hors top 20 » pour une fiche qu'on n'a simplement pas pu mesurer.
+  // « absent » pour une fiche qu'on n'a simplement pas pu mesurer.
   if (j && j.error) return { error: j.error };
-  const rs = (j && j.local_results) || [];
+  const rs = ((j && j.local_results && j.local_results.places) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad'));
   const m = pickMatch(rs, r => r.title, normName(f.target));
-  return { pos: m ? m.idx + 1 : null, place_id: (m && m.hit.place_id) ? m.hit.place_id : null };
+  // place_id ici est un CID numerique, pas un identifiant Places : on ne l'ecrit jamais dans ids.
+  return { pos: m ? m.idx + 1 : null, place_id: null };
 }
 
 // Classement d'une liste de fiches, tous mots-cles confondus.
@@ -356,4 +371,4 @@ async function snapAvisOne(idx) {
   return { ok: true, n: v.n, r: v.r };
 }
 
-module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch };
+module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch, paysDe };

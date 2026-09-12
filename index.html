@@ -593,7 +593,7 @@ function render(){
     const kws = kwsOf(f), rk = RKW[f.name] || {};
     kws.slice(1).forEach(k => {
       const e = rk[k];
-      posCell += '<div class="poskw" title="' + escAttr(k) + (e ? ' · relevé le ' + e.date : '') + '">' + escAttr(k.length > 26 ? k.slice(0, 24) + '…' : k) + ' <b' + (e && e.pos !== null && e.pos <= 3 ? ' class="top"' : '') + '>' + (e ? (e.pos === null ? 'hors top 20' : '#' + e.pos) : '—') + '</b></div>';
+      posCell += '<div class="poskw" title="' + escAttr(k) + (e ? ' · relevé le ' + e.date : '') + '">' + escAttr(k.length > 26 ? k.slice(0, 24) + '…' : k) + ' <b' + (e && e.pos !== null && e.pos <= 3 ? ' class="top"' : '') + '>' + (e ? (e.pos === null ? 'absent' : '#' + e.pos) : '—') + '</b></div>';
     });
 
     const star = (a && a.r) ? '<span class="star">' + a.r.toFixed(1) + ' ★</span>' : '<span class="fcity">—</span>';
