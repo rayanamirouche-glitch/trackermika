@@ -476,11 +476,26 @@ async function chargerCommandes(){
     const all = await fetch(FB_CMD).then(r => r.json()) || {};
     const L = Object.values(all).filter(x => x && x.site === SITE_HOST && x.statut !== 'refusee').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     const box = $('cmds'); if (!L.length) { box.style.display = 'none'; return; }
-    const st = x => x.statut === 'terminee' ? '<span class="st ok">terminée</span>' : x.statut === 'integree' || x.statut === 'en cours' ? '<span class="st run">en cours · ' + (x.postes || 0) + '/' + x.total + '</span>' : '<span class="st">reçue, en attente du paiement</span>';
-    box.innerHTML = '<h4>Vos commandes</h4>' + L.map(x => '<div class="c"><div><b>' + escAttr(x.fiche) + '</b><small>' + x.total + ' avis · ' + x.parJour + '/j' + (x.photosNb ? ' · ' + x.photosNb + ' avec photos' : '') + ' · ' + x.prix + ' € · commandé le ' + String(x.date || '').slice(8, 10) + '/' + String(x.date || '').slice(5, 7) + '</small></div>' + st(x) + '</div>').join('');
+    const st = x => {
+      const payees = x.payees || 0, tranches = x.tranches || 1;
+      const payer = payees < tranches ? '<button class="btn btn-add" style="padding:6px 12px;font-size:.72rem" onclick="payerTranche(\'' + x.id + '\',this)">Payer la tranche ' + (payees + 1) + '/' + tranches + '</button>' : '';
+      if (x.statut === 'terminee') return '<span class="st ok">terminée</span>';
+      if (x.statut === 'integree' || x.statut === 'en cours' || x.statut === 'payee') return '<span class="st run">en cours · ' + (x.postes || 0) + '/' + x.total + (payees ? ' · ' + payees + '/' + tranches + ' tranche' + (payees > 1 ? 's' : '') + ' réglée' + (payees > 1 ? 's' : '') : '') + '</span>' + payer;
+      return '<span class="st">reçue</span>' + payer;
+    };
+    box.innerHTML = '<h4>Vos commandes</h4>' + L.map(x => '<div class="c"><div><b>' + escAttr(x.fiche) + '</b><small>' + x.total + ' avis · ' + x.parJour + '/j' + (x.photosNb ? ' · ' + x.photosNb + ' avec photos' : '') + ' · ' + x.prix + ' € · commandé le ' + String(x.date || '').slice(8, 10) + '/' + String(x.date || '').slice(5, 7) + '</small></div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">' + st(x) + '</div></div>').join('');
     box.style.display = 'block';
   } catch (e) {}
 }
+async function payerTranche(id, btn){
+  if (btn) { btn.disabled = true; btn.textContent = 'Ouverture du paiement…'; }
+  try {
+    const r = await fetch('https://menageinformatique.netlify.app/.netlify/functions/paiement', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commande: id }) });
+    const j = await r.json(); if (!j.ok || !j.url) throw new Error(j.error || 'échec');
+    location.href = j.url;
+  } catch (e) { msg('Paiement indisponible — ' + e.message); if (btn) { btn.disabled = false; btn.textContent = 'Payer'; } }
+}
+(function(){ const p = new URLSearchParams(location.search).get('paiement'); if (p === 'ok') msg('Paiement reçu, merci ✓ — la tranche démarre.'); else if (p === 'annule') msg('Paiement annulé, rien n\'a été débité.'); else if (p === 'attente') msg('Paiement en cours de confirmation.'); else if (p === 'erreur') msg('Le paiement n\'a pas pu être vérifié, écris à Rayan.'); })();
 chargerCommandes();
 
 // Rafraichit une seule fiche : un appel Google au lieu de tout le parc.
