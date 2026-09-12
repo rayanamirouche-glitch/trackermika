@@ -429,6 +429,8 @@ async function supprimerFiche(id, nom){
 
 // ── Commande d'avis par le client : enregistrée dans Firebase (console de Rayan) + WhatsApp ──
 const FB_CMD = 'https://avis-tracker-default-rtdb.europe-west1.firebasedatabase.app/commandes_v1.json';
+let TRANCHE = 20;
+fetch('https://avis-tracker-default-rtdb.europe-west1.firebasedatabase.app/config_v1.json').then(r => r.json()).then(c => { const t = parseInt(c && c.tranche, 10); if (t > 0) { TRANCHE = t; const p = document.querySelector('#cmdModal p'); if (p) p.textContent = p.textContent.replace(/tranche de \d+ avis/, 'tranche de ' + t + ' avis'); } }).catch(() => {});
 const SITE_HOST = location.hostname;
 function ouvrirCommande(){
   const sel = $('c_f'); sel.innerHTML = '';
@@ -442,13 +444,13 @@ function cmdCalc(){
   const t = Math.max(1, parseInt($('c_t').value || '0', 10) || 0), j = parseInt($('c_j').value, 10);
   let p = Math.max(0, parseInt($('c_p').value || '0', 10) || 0); if (p > t) { p = t; $('c_p').value = t; }
   const pp = parseInt($('c_pp').value, 10), prix = (t - p) * 4 + p * (5 + pp);
-  const tranches = Math.ceil(t / 20), premiere = Math.round(prix * Math.min(20, t) / t), jours = Math.ceil(t / j);
+  const tranches = Math.ceil(t / TRANCHE), premiere = Math.round(prix * Math.min(TRANCHE, t) / t), jours = Math.ceil(t / j);
   return { t, j, p, pp, prix, tranches, premiere, jours };
 }
 function cmdPrix(){
   const c = cmdCalc();
   $('c_prix').innerHTML = '<b>' + c.prix + ' €</b> pour ' + c.t + ' avis' + (c.p ? ' dont ' + c.p + ' avec ' + c.pp + ' photo' + (c.pp > 1 ? 's' : '') : '') + ' · environ ' + c.jours + ' jour' + (c.jours > 1 ? 's' : '') +
-    '<small>' + (c.tranches > 1 ? c.tranches + ' tranches de 20 avis · 1re tranche ' + c.premiere + ' €' : 'une seule tranche, ' + c.prix + ' €') + ' · le lien de paiement vous est envoyé à la validation, la tranche suivante après les 20 avis publiés</small>';
+    '<small>' + (c.tranches > 1 ? c.tranches + ' tranches de ' + TRANCHE + ' avis · 1re tranche ' + c.premiere + ' €' : 'une seule tranche, ' + c.prix + ' €') + ' · le lien de paiement vous est envoyé à la validation, la tranche suivante après les 20 avis publiés</small>';
 }
 async function envoyerCommande(){
   const c = cmdCalc(); let fiche, ville, lien;

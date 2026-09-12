@@ -3,6 +3,8 @@
 // → enregistrée dans Firebase commandes_v1/<id> (lue par la console de Rayan),
 // → WhatsApp à Rayan via CallMeBot si CALLMEBOT_PHONE et CALLMEBOT_KEY sont définies sur le site.
 const FB = 'https://avis-tracker-default-rtdb.europe-west1.firebasedatabase.app/commandes_v1/';
+const CFG = 'https://avis-tracker-default-rtdb.europe-west1.firebasedatabase.app/config_v1.json';
+async function tranche() { try { const c = await fetch(CFG).then(r => r.json()); const t = parseInt(c && c.tranche, 10); return t > 0 ? t : 20; } catch (e) { return 20; } }
 const H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Content-Type': 'application/json' };
 
 exports.handler = async (event) => {
@@ -14,18 +16,19 @@ exports.handler = async (event) => {
   if (!/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+\/maps|maps\.google\.[a-z.]+)\//.test(b.lien)) return { statusCode: 400, headers: H, body: JSON.stringify({ error: 'lien Maps invalide' }) };
   const ph = Math.min(Math.max(photosNb, 0), total), ppc = Math.min(Math.max(photosParCom, 1), 3);
   const prix = (total - ph) * 4 + ph * (5 + ppc);
-  const tranches = Math.ceil(total / 20), premiere = Math.round(prix * Math.min(20, total) / total);
+  const TR = await tranche();
+  const tranches = Math.ceil(total / TR), premiere = Math.round(prix * Math.min(TR, total) / total);
   const site = (process.env.URL || ('https://' + ((event.headers && event.headers.host) || ''))).replace(/^https?:\/\//, '').replace(/\/$/, '');
   const id = 'k' + Date.now();
   const cmd = { id, site, client: String(b.client || '').slice(0, 60), fiche: String(b.fiche).slice(0, 120), ville: String(b.ville || '').slice(0, 60), lien: b.lien,
-    total, parJour, photosNb: ph, photosParCom: ppc, prix, tranches, premiere, debut: (b.debut || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    total, parJour, photosNb: ph, photosParCom: ppc, prix, tranches, premiere, tailleTranche: TR, debut: (b.debut || new Date().toISOString().slice(0, 10)).slice(0, 10),
     note: String(b.note || '').slice(0, 300), statut: 'nouvelle', date: new Date().toISOString(), postes: 0, payees: 0 };
   const r = await fetch(FB + id + '.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cmd) });
   if (!r.ok) return { statusCode: 502, headers: H, body: JSON.stringify({ error: 'enregistrement impossible (' + r.status + ')' }) };
   // Notification WhatsApp : relais unique sur le site ménage (les clés n'existent que là).
   let notif = false;
   const txt = `Nouvelle commande — ${cmd.client || site}\n${cmd.fiche} (${cmd.ville})\n${total} com · ${parJour}/j` + (ph ? ` · ${ph} avec ${ppc} photo${ppc > 1 ? 's' : ''}` : '') +
-    `\n${prix} € · ${tranches} tranche${tranches > 1 ? 's' : ''} de 20 · 1re ${premiere} €\ndébut ${cmd.debut}` + (cmd.note ? `\n« ${cmd.note} »` : '');
+    `\n${prix} € · ${tranches} tranche${tranches > 1 ? 's' : ''} de ${TR} · 1re ${premiere} €\ndébut ${cmd.debut}` + (cmd.note ? `\n« ${cmd.note} »` : '');
   try {
     const n = await fetch('https://menageinformatique.netlify.app/.netlify/functions/notif', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt }) });
     const nj = await n.json().catch(() => ({})); notif = !!nj.envoye;
