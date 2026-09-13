@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Tracker Mika — Clim & PAC — R.Consulting</title>
+<title>Tracker — R.Consulting</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
@@ -188,7 +188,7 @@ tr.alert{background:var(--bad-soft)}tr.alert:hover{background:#fbe0e6}
 </style></head><body>
 <div class="shell">
 <aside class="side">
-  <div class="brand"><div class="brand-mark">R<span>.</span></div><div><b>TRACKER MIKA — CLIM & PAC</b><small>SUIVI LOCAL GOOGLE</small></div></div>
+  <div class="brand"><div class="brand-mark">R<span>.</span></div><div><b>TRACKER</b><small>SUIVI LOCAL GOOGLE</small></div></div>
   <div class="side-label">ESPACE DE SUIVI</div>
   <nav class="nav">
     <a href="#top" class="on" onclick="navOn(this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Vue d'ensemble</a>
@@ -201,12 +201,12 @@ tr.alert{background:var(--bad-soft)}tr.alert:hover{background:#fbe0e6}
 </aside>
 <div class="main" id="top">
 <header class="topbar">
-  <div class="crumb">Pilotage local <span>›</span> <b>Tracker Mika — Clim & PAC</b></div>
+  <div class="crumb">Pilotage local <span>›</span> <b>Tracker</b></div>
   <div class="top-right"><input class="search" id="q" placeholder="Rechercher une fiche, une ville, un mot-clé…" oninput="Q=this.value;applyView()"><span class="pill">Relevé manuel · <span id="hNb">—</span> fiches</span><span class="avatar">RC</span></div>
 </header>
 <main class="work">
 <div class="heading">
-  <div><div class="eyebrow">VOTRE PORTEFEUILLE GOOGLE</div><h1>Tracker Mika — Clim & PAC</h1><p>Avis Google et position locale de chacune de vos fiches, mesurés comme les voit un client.</p></div>
+  <div><div class="eyebrow">VOTRE PORTEFEUILLE GOOGLE</div><h1>Tracker</h1><p>Avis Google et position locale de chacune de vos fiches, mesurés comme les voit un client.</p></div>
   <div class="actions">
     <button class="btn btn-avis" id="btnAvis" onclick="runAvis()">↻ Actualiser les avis</button>
     <button class="btn btn-rank" id="btnRank" onclick="runRank()">📍 Classements</button>
@@ -259,7 +259,7 @@ tr.alert{background:var(--bad-soft)}tr.alert:hover{background:#fbe0e6}
 <div class="row"><button class="btn btn-add" id="a_ok" onclick="ajouterFiche()">Ajouter</button><button class="btn btn-rank" onclick="$('modal').style.display='none'">Annuler</button></div>
 </div></div>
 <div class="modal" id="cmdModal"><div class="box">
-<h3>Commander des avis</h3><p>4 € l'avis · 6, 7 ou 8 € l'avis avec 1, 2 ou 3 photos du chantier · paiement par tranche de 20 avis.</p>
+<h3>Commander des avis</h3><p>4 € l'avis · 8 € l'avis avec photos (10 € à partir de 3 photos) · paiement par tranche de 20 avis.</p>
 <label>Fiche</label><select id="c_f" onchange="cmdFicheChange()"></select>
 <div id="c_new" style="display:none">
 <label>Nom de la nouvelle fiche</label><input id="c_n" placeholder="ex : Couvreur Dupont Père & Fils">
@@ -535,7 +535,7 @@ function cmdFicheChange(){ $('c_new').style.display = $('c_f').value === 'new' ?
 function cmdCalc(){
   const t = Math.max(1, parseInt($('c_t').value || '0', 10) || 0), j = parseInt($('c_j').value, 10);
   let p = Math.max(0, parseInt($('c_p').value || '0', 10) || 0); if (p > t) { p = t; $('c_p').value = t; }
-  const pp = parseInt($('c_pp').value, 10), prix = (t - p) * 4 + p * (5 + pp);
+  const pp = parseInt($('c_pp').value, 10), prix = (t - p) * 4 + p * (pp >= 3 ? 10 : 8);
   const tranches = Math.ceil(t / TRANCHE), premiere = Math.round(prix * Math.min(TRANCHE, t) / t), jours = Math.ceil(t / j);
   return { t, j, p, pp, prix, tranches, premiere, jours };
 }

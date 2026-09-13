@@ -31,7 +31,7 @@ exports.handler = async (event) => {
   if (!b.fiche || !b.lien || !(total > 0) || !(parJour >= 1 && parJour <= 3)) return { statusCode: 400, headers: H, body: JSON.stringify({ error: 'fiche, lien, total et par jour (1 à 3) requis' }) };
   if (!/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+\/maps|maps\.google\.[a-z.]+)\//.test(b.lien)) return { statusCode: 400, headers: H, body: JSON.stringify({ error: 'lien Maps invalide' }) };
   const ph = Math.min(Math.max(photosNb, 0), total), ppc = Math.min(Math.max(photosParCom, 1), 3);
-  const prix = (total - ph) * 4 + ph * (5 + ppc);
+  const prix = (total - ph) * 4 + ph * (ppc >= 3 ? 10 : 8); // 13/09/2026 : 8 € l'avis photo, 10 € à partir de 3 photos
   const TR = await tranche();
   const tranches = Math.ceil(total / TR), premiere = Math.round(prix * Math.min(TR, total) / total);
   const site = (process.env.URL || ('https://' + ((event.headers && event.headers.host) || ''))).replace(/^https?:\/\//, '').replace(/\/$/, '');
