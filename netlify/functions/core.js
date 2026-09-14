@@ -130,7 +130,7 @@ async function snapAvisWave(start) {
   const snap = {};
   await Promise.all(wave.map(async f => {
     const pid = ids[f.name]; if (!pid) return;
-    const u = 'https://places.googleapis.com/v1/places/' + pid + '?fields=rating,userRatingCount&key=' + K;
+    const u = 'https://places.googleapis.com/v1/places/' + pid + '?fields=rating,userRatingCount,nationalPhoneNumber,websiteUri&key=' + K;
     for (const ms of [8500]) {
       try {
         const j = await to(fetch(u).then(r => r.ok ? r.json() : null), ms);
@@ -429,7 +429,7 @@ async function snapAvisOne(idx) {
   const w = await getJSON(key, {});
   w[f.name] = v;
   await setJSON(key, w);
-  return { ok: true, n: v.n, r: v.r };
+  return { ok: true, n: v.n, r: v.r, tel: j.nationalPhoneNumber || null, web: j.websiteUri || null };
 }
 
 module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, recolter, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch, paysDe };
