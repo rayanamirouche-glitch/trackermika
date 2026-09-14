@@ -44,7 +44,7 @@ exports.handler = async (event) => {
       try {
         const j = await fetch('https://places.googleapis.com/v1/places:searchText', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.id,places.displayName,places.userRatingCount,places.location,places.formattedAddress' },
+          headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.nationalPhoneNumber,places.websiteUri,places.id,places.displayName,places.userRatingCount,places.location,places.formattedAddress' },
           body: JSON.stringify({ textQuery: name + ' ' + city, languageCode: 'fr' })
         }).then(r => r.json());
         const t = core.normName(name.split(' ').slice(0, 3).join(' '));
@@ -103,7 +103,7 @@ exports.handler = async (event) => {
       if (q.ll) { const c = q.ll.split(',').map(Number); body.locationBias = { circle: { center: { latitude: c[0], longitude: c[1] }, radius: 30000 } }; }
       const j = await fetch('https://places.googleapis.com/v1/places:searchText', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.id,places.displayName,places.rating,places.userRatingCount,places.formattedAddress,places.location' },
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.nationalPhoneNumber,places.websiteUri,places.id,places.displayName,places.rating,places.userRatingCount,places.formattedAddress,places.location' },
         body: JSON.stringify(body)
       }).then(r => r.json());
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ q: q.q, results: (j.places || []).slice(0, 5), erreur: j.error || null }, null, 1) };
@@ -211,7 +211,7 @@ exports.handler = async (event) => {
       const ll = f.ll.split(',').map(Number);
       const j = await fetch('https://places.googleapis.com/v1/places:searchText', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.id,places.displayName,places.rating,places.userRatingCount,places.formattedAddress' },
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': K, 'X-Goog-FieldMask': 'places.nationalPhoneNumber,places.websiteUri,places.id,places.displayName,places.rating,places.userRatingCount,places.formattedAddress' },
         body: JSON.stringify({ textQuery: f.name, locationBias: { circle: { center: { latitude: ll[0], longitude: ll[1] }, radius: 5000 } } })
       }).then(r => r.json());
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ fiche: f.name, results: (j.places || []).slice(0, 8) }, null, 1) };
