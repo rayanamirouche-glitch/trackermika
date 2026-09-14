@@ -466,25 +466,42 @@ async function editLiv(i){
     render(); msg('Postés de « ' + f.name + ' » : ' + (livEff(f) != null ? '+' + livEff(f) : '—') + ' ✓');
   } catch (e) { msg('Non enregistré — ' + e.message); }
 }
+// Les recherches Google sont soumises a SerpAPI sans attendre (async), puis lues toutes les 4 s
+// jusqu'a ce que chaque fiche ait sa position (2 min max). Avant, la fonction Netlify attendait
+// Google et etait tuee a 10 s : la moitie des fiches sortait en « timeout ».
+async function recolterTout(etat){
+  const res = [];
+  // Google met parfois plusieurs minutes a repondre via la file SerpAPI : on lit jusqu'a 5 min.
+  for (let t = 0; t < 48 && etat.attente > 0; t++) {
+    await new Promise(function(r){ setTimeout(r, 4000); });
+    msg('Lecture des résultats — ' + etat.releves + ' fiche(s) relevée(s), ' + etat.attente + ' en attente…');
+    try {
+      const r = await fetch('/.netlify/functions/run?type=rankfetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobs: etat.jobs }) });
+      const j = await r.json();
+      if (Array.isArray(j.jobs)) etat.jobs = j.jobs;
+      etat.releves += (j.releves || 0); etat.attente = (j.en_attente || 0); etat.erreurs += (j.erreurs || 0); if (j.message) etat.motif = j.message;
+      Object.keys(j.parMotCle || {}).forEach(function(n){ const m = j.parMotCle[n]; res.push(n.split(' ').slice(0, 3).join(' ') + ' ' + Object.keys(m).map(function(k){ return k + (m[k] === null ? ' —' : ' #' + m[k]); }).join(', ')); });
+    } catch (e) {}
+    if (t % 3 === 2) await load();
+  }
+  await load();
+  return res;
+}
 async function runRankSel(){
   const names = DATA.fiches.map(function(f){ return f.name; }).filter(function(n){ return SEL.has(n); });
   if (!names.length) { msg('Coche d’abord les fiches à mesurer (case à gauche de chaque ligne)'); return; }
   var rech = 0; DATA.fiches.forEach(function(f){ if (SEL.has(f.name)) rech += kwsOf(f).length; });
   if (!confirm('Relever le classement de ' + names.length + ' fiche(s) ? (' + rech + ' recherche(s) SerpAPI)')) return;
   $('btnSel').disabled = true;
-  let releves = 0, erreurs = 0, motif = null; const res = [];
+  const etat = { jobs: [], releves: 0, attente: 0, erreurs: 0, motif: null };
   try {
-    for (let s = 0; s < names.length; s += 10) {
-      const lot = names.slice(s, s + 10);
-      msg('Classement des cochées — ' + Math.min(s + 10, names.length) + ' / ' + names.length + '…');
-      const r = await fetch('/.netlify/functions/run?type=rankselect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ names: lot }) });
-      const j = await r.json();
-      releves += (j.releves || 0); erreurs += (j.erreurs || 0); if (j.message) motif = j.message;
-      Object.keys(j.parMotCle || {}).forEach(function(n){ const m = j.parMotCle[n]; res.push(n.split(' ').slice(0, 3).join(' ') + ' ' + Object.keys(m).map(function(k){ return k + (m[k] === null ? ' —' : ' #' + m[k]); }).join(', ')); });
-    }
-    await load();
-    if (releves === 0) msg('Aucun classement relevé' + (motif ? ' — ' + motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
-    else msg('Classement ✓ ' + res.join(' · ') + (erreurs ? ' — ' + erreurs + ' en échec' + (motif ? ' (' + motif + ')' : '') : ''));
+    msg('Envoi des recherches — ' + names.length + ' fiche(s)…');
+    const r = await fetch('/.netlify/functions/run?type=rankselect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ names: names }) });
+    const j = await r.json();
+    etat.jobs = j.jobs || []; etat.attente = (j.en_attente || 0); etat.erreurs += (j.erreurs || 0); if (j.message) etat.motif = j.message;
+    const res = await recolterTout(etat);
+    if (etat.releves === 0) msg('Aucun classement relevé' + (etat.motif ? ' — ' + etat.motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
+    else msg('Classement ✓ ' + res.join(' · ') + (etat.erreurs ? ' — ' + etat.erreurs + ' en échec' + (etat.motif ? ' (' + etat.motif + ')' : '') : ''));
   } catch (e) { msg('Erreur pendant le relevé — recharge et réessaie'); }
   $('btnSel').disabled = false;
   updSelBtn();
@@ -620,8 +637,14 @@ function render(){
   const bC = document.getElementById('btnC3'); if (bC && !bC.disabled) bC.textContent = '🗓 3 jours (' + fiches.length + ' rech. SerpAPI)';
   const bA = document.getElementById('btnAvis'); if (bA && !bA.disabled) bA.textContent = '↻ Actualiser AVIS (' + fiches.length + ' fiches · ' + (fiches.length * 0.02).toFixed(2).replace('.', ',') + ' $)';
   if (admin) $('btnRecale').style.display = '';
-  const [dNow, dPrev] = lastTwo(avis);
-  const aNow = avis[dNow] || {}, aPrev = avis[dPrev] || {};
+  // Un relevé du jour peut être partiel (vague en échec) : chaque fiche garde sa dernière valeur
+  // connue, l'avant-dernière sert à la variation. Sinon le total du jour tombait de 480 à 297.
+  const aNow = {}, aPrev = {};
+  dates(avis).forEach(d => { const s = avis[d] || {}; Object.keys(s).forEach(n => {
+    if (!s[n] || s[n].n == null) return;
+    if (aNow[n] !== undefined) aPrev[n] = aNow[n];
+    aNow[n] = s[n];
+  }); });
   const rDates = dates(rank);
   // Les vagues de classement ne tombent pas toutes le meme jour. On garde la derniere
   // position connue de chaque fiche, et l'avant-derniere pour calculer l'evolution.
@@ -750,7 +773,10 @@ function render(){
   $('objFill').style.width = (gObj ? Math.min(100, gTot / gObj * 100) : 0) + '%';
 
   const ds = dates(avis);
-  const totals = ds.map(d => Object.values(avis[d]).reduce((s,v) => s + (v && v.n ? v.n : 0), 0));
+  // Même règle pour la courbe : un jour où seule une partie des fiches a été relevée ne fait plus
+  // plonger le total, chaque fiche garde sa dernière valeur connue.
+  const connu = {};
+  const totals = ds.map(d => { const s = avis[d] || {}; Object.keys(s).forEach(n => { if (s[n] && s[n].n != null) connu[n] = s[n].n; }); return Object.values(connu).reduce((a, b) => a + b, 0); });
   if (chart) chart.destroy();
   chart = new Chart($('chart'), {
     type: 'line',
@@ -791,31 +817,44 @@ async function runRank(){
   $('btnRank').disabled = true;
   const n = (DATA && DATA.fiches ? DATA.fiches.length : 43);
   const waves = [];
-  for (let s = 0; s < n; s += 10) waves.push(s);
+  for (let s = 0; s < n; s += 5) waves.push(s);
+  const etat = { jobs: [], releves: 0, attente: 0, erreurs: 0, motif: null };
   try{
-    msg('Vague 1 / ' + waves.length + '…');
+    msg('Envoi des recherches — vague 1 / ' + waves.length + '…');
     const r = await fetch('/.netlify/functions/run?type=rank&start=0' + (admin ? '&force=1' : ''));
     if (r.status === 429) {
       const j = await r.json();
       msg('Classements déjà relevés récemment — prochain relevé possible dans ~' + j.cooldown + 'h');
       $('btnRank').disabled = false; return;
     }
-    // Le retour de chaque vague est lu : une vague qui echoue (quota SerpAPI, cle invalide) ne passe plus inapercue.
-    let releves = 0, erreurs = 0, motif = null;
     const compte = async (rep) => {
-      try { const j = await rep.json(); releves += (j.releves || 0); erreurs += (j.erreurs || 0); if (j.message) motif = j.message; }
-      catch (e) { erreurs++; }
+      try { const j = await rep.json(); etat.jobs = etat.jobs.concat(j.jobs || []); etat.attente += (j.en_attente || 0); etat.erreurs += (j.erreurs || 0); if (j.message) etat.motif = j.message; }
+      catch (e) { etat.erreurs++; }
     };
     await compte(r);
     for (let i = 1; i < waves.length; i++) {
-      msg('Vague ' + (i+1) + ' / ' + waves.length + ' — ' + releves + ' fiche(s) relevée(s)…');
+      msg('Envoi des recherches — vague ' + (i+1) + ' / ' + waves.length + '…');
       await compte(await fetch('/.netlify/functions/run?type=rank&force=1&start=' + waves[i]));
-      await load();
     }
-    await load();
-    if (releves === 0) msg('Aucun classement relevé' + (motif ? ' — ' + motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
-    else if (erreurs) msg(releves + ' fiche(s) relevée(s), ' + erreurs + ' en échec' + (motif ? ' — ' + motif : '') + '. Les autres gardent leur dernière position connue.');
-    else msg('Classements à jour ✓ (' + releves + ' fiches)');
+    await recolterTout(etat);
+    // Fiches sans position (soumission refusee ou recherche en erreur) : jusqu'a 4 nouvelles
+    // tentatives espacees de 30 s, SerpAPI refuse par vagues puis accepte de nouveau.
+    for (let passe = 0; passe < 4; passe++) {
+      const manquantes = DATA.fiches.map(function(f){ return f.name; }).filter(function(n){ return !etat.jobs.some(function(j){ return j.name === n && j.fait && !j.err; }); });
+      if (!manquantes.length || manquantes.length >= n) break;
+      msg('Nouvelle tentative ' + (passe + 1) + '/4 pour ' + manquantes.length + ' fiche(s) dans 30 s…');
+      await new Promise(function(r){ setTimeout(r, 30000); });
+      try {
+        const r2 = await fetch('/.netlify/functions/run?type=rankselect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ names: manquantes.slice(0, 40) }) });
+        const j2 = await r2.json();
+        etat.jobs = etat.jobs.filter(function(j){ return j.fait && !j.err; }).concat(j2.jobs || []); etat.attente = (j2.en_attente || 0); if (j2.message) etat.motif = j2.message;
+        await recolterTout(etat);
+      } catch (e) {}
+    }
+    etat.erreurs = DATA.fiches.filter(function(f){ return !etat.jobs.some(function(j){ return j.name === f.name && j.fait && !j.err; }); }).length; etat.attente = 0;
+    if (etat.releves === 0) msg('Aucun classement relevé' + (etat.motif ? ' — ' + etat.motif : '') + '. Les positions affichées datent du dernier relevé réussi.');
+    else if (etat.erreurs || etat.attente) msg(etat.releves + ' fiche(s) relevée(s), ' + (etat.erreurs + etat.attente) + ' en échec' + (etat.motif ? ' — ' + etat.motif : '') + '. Les autres gardent leur dernière position connue.');
+    else msg('Classements à jour ✓ (' + etat.releves + ' fiches)');
   }catch(e){ msg('Erreur pendant le relevé — recharge et réessaie'); }
   $('btnRank').disabled = false;
 }

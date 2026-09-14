@@ -198,76 +198,137 @@ function paysDe(f) {
 }
 // Position dans le bloc local de GOOGLE RECHERCHE (mobile), vu depuis la ville de la fiche :
 // c'est ce qu'un client voit quand il tape « couvreur nice ». (Avant le 12/09/2026 : Google Maps.)
-async function serpPos(f, kw, K) {
+// Depuis le 14/09/2026 les recherches sont SOUMISES en asynchrone (async=true) : SerpAPI repond
+// tout de suite avec un identifiant, et le resultat se lit ensuite dans son archive (gratuit).
+// Avant, la fonction attendait 4 a 9 s par recherche et Netlify la tuait a 10 s : la moitie des
+// fiches ressortait en « timeout » et gardait une position perimee.
+function serpUrl(f, kw, K) {
   const [lat, lon] = String(f.ll || '').split(',');
   const gl = paysDe(f);
-  const u = 'https://serpapi.com/search.json?engine=google&q=' + encodeURIComponent(kw) + '&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon)
-    + '&device=mobile&hl=fr&gl=' + gl + '&google_domain=google.' + gl + '&no_cache=true&api_key=' + K;
-  const j = await to(fetch(u).then(r => r.json()), 8500);
-  // SerpAPI en erreur (quota epuise, cle invalide) renvoie {error}. Sans ce test on enregistrait
-  // « absent » pour une fiche qu'on n'a simplement pas pu mesurer.
-  if (j && j.error) return { error: j.error };
-  const rs = ((j && j.local_results && j.local_results.places) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad'));
-  const m = pickMatch(rs, r => r.title, normName(f.target));
-  // place_id ici est un CID numerique, pas un identifiant Places : on ne l'ecrit jamais dans ids.
-  return { pos: m ? m.idx + 1 : null, place_id: null };
+  return 'https://serpapi.com/search.json?engine=google&q=' + encodeURIComponent(kw) + '&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon)
+    // no_cache est indispensable meme en async : sans lui, SerpAPI ressert pendant 1 h le resultat
+    // d'une recherche qui a echoue (« We couldn't get valid results… ») et refuse la fiche a chaque essai.
+    + '&device=mobile&hl=fr&gl=' + gl + '&google_domain=google.' + gl + '&no_cache=true&async=true&api_key=' + K;
 }
-
-// Classement d'une liste de fiches, tous mots-cles confondus.
-// → snap : position sur le mot-cle principal (historique 'rankbatch', filtres, fleches)
-// → snapkw : position par mot-cle (historique 'rankkw', affichage sous la position)
-async function rankFiches(list, K) {
-  const [ids, over] = await Promise.all([getJSON('ids', {}), kwOverrides()]);
-  let idsChanged = false, erreurs = 0, message = null;
-  const snap = {}, snapkw = {};
-  await Promise.all(list.map(async f => {
-    const kws = kwsOf(f, over);
-    const res = await Promise.all(kws.map(async kw => { try { return await serpPos(f, kw, K); } catch (e) { return { error: String(e && e.message ? e.message : e) }; } }));
-    kws.forEach((kw, i) => {
-      const r = res[i];
-      if (r.error) { erreurs++; message = r.error; return; }
-      snapkw[f.name] = snapkw[f.name] || {}; snapkw[f.name][kw] = r.pos;
-      if (i === 0) snap[f.name] = r.pos;
-      if (r.pos !== null && !ids[f.name] && r.place_id) { ids[f.name] = r.place_id; idsChanged = true; }
-    });
-    // le principal a echoue mais un secondaire a repondu : on garde une position plutot que rien
-    if (snap[f.name] === undefined && snapkw[f.name]) snap[f.name] = Object.values(snapkw[f.name])[0];
+function posDe(f, j) {
+  const rs = ((j && j.local_results && (Array.isArray(j.local_results) ? j.local_results : j.local_results.places)) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad'));
+  const m = pickMatch(rs, r => r.title, normName(f.target));
+  return m ? m.idx + 1 : null;
+}
+const ATTENTE_MAX_MS = 180000;   // au-dela (3 min ; Google mobile repond en 30-60 s), la recherche est comptee en echec et resoumise
+// Soumet toutes les recherches (fiche x mot-cle) d'une liste de fiches, sans attendre Google.
+// cle = vague d'ecriture ('0', '10', … ou 'sel') : le resultat ira dans rankbatch/<jour>/<cle>.
+// La file des recherches n'est PAS stockee dans un blob (lecture « eventuelle » : une file ecrite par
+// une fonction etait relue vide par la suivante) : elle est rendue a la page, qui la renvoie a rankfetch.
+async function soumettre(list, K, cle) {
+  const over = await kwOverrides();
+  const taches = [];
+  list.forEach(f => { kwsOf(f, over).forEach((kw, i) => { taches.push({ f: f, kw: kw, i: i }); }); });
+  const jobs = []; let erreurs = 0, message = null;
+  // Soumission par petits paquets : 30 recherches lancees d'un coup, SerpAPI en refusait la moitie
+  // (« We couldn't get valid results… try again later »). Un refus est retente deux fois.
+  for (let k = 0; k < taches.length; k += 5) {
+    await Promise.all(taches.slice(k, k + 5).map(async t => {
+      let j = null;
+      for (let essai = 0; essai < 3; essai++) {
+        if (essai) await new Promise(r => setTimeout(r, 1500));
+        try { j = await to(fetch(serpUrl(t.f, t.kw, K)).then(r => r.json()), 5000); } catch (e) { j = { error: String(e && e.message ? e.message : e) }; }
+        if (j && !j.error) break;
+      }
+      if (!j || j.error) { erreurs++; message = (j && j.error) || 'reponse vide'; return; }
+      const st = j.search_metadata || {};
+      const job = { name: t.f.name, kw: t.kw, i: t.i, id: st.id, cle: cle, t: Date.now() };
+      if (j.local_results || /success/i.test(st.status || '')) { job.fait = true; job.pos = posDe(t.f, j); }
+      jobs.push(job);
+    }));
+  }
+  return { jobs: jobs, erreurs: erreurs, message: message };
+}
+// Lit dans l'archive SerpAPI les recherches encore en cours, puis ecrit chaque vague dont TOUTES les
+// fiches sont pretes dans rankbatch/rankkw du jour (une seule ecriture par vague, jamais de
+// relecture-fusion sur une lecture eventuelle). Rend la file mise a jour a la page.
+async function recolter(K, jobs) {
+  await chargerFiches();
+  const parNom = {}; FICHES.forEach(f => { parNom[f.name] = f; });
+  jobs = Array.isArray(jobs) ? jobs : [];
+  let erreurs = 0, message = null;
+  await Promise.all(jobs.filter(j => !j.fait).map(async j => {
+    try {
+      const r = await to(fetch('https://serpapi.com/searches/' + j.id + '.json?api_key=' + K).then(x => x.json()), 8000);
+      const st = String((r && r.search_metadata && r.search_metadata.status) || '');
+      j.st = st || (r && r.error ? 'err:' + String(r.error).slice(0, 60) : 'vide');   // diagnostic visible dans la file
+      if (r && r.error && !/processing|queued/i.test(String(r.error))) { j.fait = true; j.err = r.error; return; }
+      if (!r || !r.search_metadata || /processing|queued/i.test(st)) {
+        if (Date.now() - (j.t || 0) > ATTENTE_MAX_MS) { j.fait = true; j.err = 'timeout'; }
+        return;
+      }
+      if (/error/i.test(st)) { j.fait = true; j.err = (r.search_metadata.error || st); return; }
+      j.fait = true; j.pos = parNom[j.name] ? posDe(parNom[j.name], r) : null;
+    } catch (e) { if (Date.now() - (j.t || 0) > ATTENTE_MAX_MS) { j.fait = true; j.err = 'timeout'; } }
   }));
-  if (idsChanged) await setJSON('ids', ids);
-  return { snap, snapkw, erreurs, message };
+  const parCle = {};
+  jobs.forEach(j => { (parCle[j.cle] = parCle[j.cle] || []).push(j); });
+  const positions = {}, parMotCle = {}; let releves = 0;
+  for (const [cle, L] of Object.entries(parCle)) {
+    // Une fiche est prete quand tous ses mots-cles sont revenus. Des qu'une vague a du nouveau,
+    // on REECRIT sa cle avec tout ce qui est pret (la page detient l'etat complet) : pas de
+    // relecture-fusion sur un blob eventuel. Les cochees ('sel') s'accumulent dans la journee.
+    const parFiche = {};
+    L.forEach(j => { (parFiche[j.name] = parFiche[j.name] || []).push(j); });
+    const snap = {}, snapkw = {}; let nouveau = false;
+    for (const [name, J] of Object.entries(parFiche)) {
+      if (!J.every(j => j.fait)) continue;
+      const ok = J.filter(j => !j.err);
+      if (!J.every(j => j.ecrit)) { nouveau = true; J.forEach(j => { if (j.err && !j.ecrit) { erreurs++; message = j.err; } }); }
+      if (!ok.length) continue;
+      snapkw[name] = {}; ok.forEach(j => { snapkw[name][j.kw] = (j.pos === undefined ? null : j.pos); });
+      const p = ok.find(j => j.i === 0) || ok[0];
+      snap[name] = (p.pos === undefined ? null : p.pos);
+    }
+    if (!nouveau) continue;
+    if (Object.keys(snap).length) {
+      if (cle === 'sel') {
+        for (const [k, v] of [['rankbatch/' + today() + '/sel', snap], ['rankkw/' + today() + '/sel', snapkw]]) {
+          const cur = await getJSON(k, {}); await setJSON(k, Object.assign(cur, v));
+        }
+      } else {
+        await setJSON('rankbatch/' + today() + '/' + cle, snap);
+        await setJSON('rankkw/' + today() + '/' + cle, snapkw);
+      }
+    }
+    for (const [name, J] of Object.entries(parFiche)) {
+      if (!J.every(j => j.fait) || J.every(j => j.ecrit)) continue;
+      J.forEach(j => { j.ecrit = true; });
+      if (snap[name] !== undefined) { positions[name] = snap[name]; parMotCle[name] = snapkw[name]; releves++; }
+    }
+  }
+  const attente = new Set(jobs.filter(j => !j.fait).map(j => j.name)).size;
+  return { jobs: jobs, releves: releves, en_attente: attente, erreurs: erreurs, message: message, positions: positions, parMotCle: parMotCle };
 }
 
 async function snapRank(start, baseUrl) {
   await chargerFiches();
+  await chargerFiches();
   const K = process.env.SERPAPI_KEY;
   start = start || 0;
-  const wave = FICHES.slice(start, start + WAVE);
-  const r = await rankFiches(wave, K);
-  // Ne rien ecrire si la vague entiere a echoue : sinon on ecrase le releve du jour par une cle vide.
-  if (Object.keys(r.snap).length) {
-    await setJSON('rankbatch/' + today() + '/' + start, r.snap);
-    await setJSON('rankkw/' + today() + '/' + start, r.snapkw);
-    if (start === 0) await setJSON('rankMeta', { last: new Date().toISOString() });
-  }
-  return { releves: Object.keys(r.snap).length, total: wave.length, erreurs: r.erreurs, message: r.message, positions: r.snap, parMotCle: r.snapkw };
+  // La page envoie des vagues de 5 fiches (15 recherches max par appel) ; la cle d'ecriture reste
+  // alignee sur WAVE (10) pour que rankHist retrouve les blobs : deux demi-vagues partagent une cle.
+  const wave = FICHES.slice(start, start + 5);
+  const r = await soumettre(wave, K, String(Math.floor(start / WAVE) * WAVE));
+  if (start === 0 && r.jobs.length) await setJSON('rankMeta', { last: new Date().toISOString() });
+  return { jobs: r.jobs, soumis: r.jobs.length, total: wave.length, erreurs: r.erreurs, message: r.message, en_attente: new Set(r.jobs.map(j => j.name)).size, releves: 0 };
 }
 
-// Classement a la demande des seules fiches cochees (10 max par appel : limite de 10 s de Netlify).
-// Ecrit dans 'rankbatch/<jour>/sel' et 'rankkw/<jour>/sel', fusionnes avec les releves manuels du jour,
-// sans toucher au cooldown du releve complet.
+// Classement a la demande des seules fiches cochees (POST {names}). Soumission immediate, resultats
+// ecrits dans 'rankbatch/<jour>/sel' et 'rankkw/<jour>/sel' par rankfetch, sans toucher au cooldown.
 async function snapRankSel(names) {
+  await chargerFiches();
   await chargerFiches();
   const K = process.env.SERPAPI_KEY;
   const voulu = new Set(names || []);
-  const sel = FICHES.filter(f => voulu.has(f.name)).slice(0, WAVE);
-  const r = await rankFiches(sel, K);
-  if (Object.keys(r.snap).length) {
-    for (const [k, v] of [['rankbatch/' + today() + '/sel', r.snap], ['rankkw/' + today() + '/sel', r.snapkw]]) {
-      const cur = await getJSON(k, {});
-      await setJSON(k, Object.assign(cur, v));
-    }
-  }
-  return { releves: Object.keys(r.snap).length, total: sel.length, erreurs: r.erreurs, message: r.message, positions: r.snap, parMotCle: r.snapkw };
+  const sel = FICHES.filter(f => voulu.has(f.name)).slice(0, 40);
+  const r = await soumettre(sel, K, 'sel');
+  return { jobs: r.jobs, soumis: r.jobs.length, total: sel.length, erreurs: r.erreurs, message: r.message, en_attente: new Set(r.jobs.map(j => j.name)).size, releves: 0 };
 }
 
 async function rankHist() {
@@ -371,4 +432,4 @@ async function snapAvisOne(idx) {
   return { ok: true, n: v.n, r: v.r };
 }
 
-module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch, paysDe };
+module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, recolter, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch, paysDe };
