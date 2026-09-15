@@ -211,7 +211,7 @@ function serpUrl(f, kw, K) {
     + '&device=mobile&hl=fr&gl=' + gl + '&google_domain=google.' + gl + '&no_cache=true&async=true&api_key=' + K;
 }
 function posDe(f, j) {
-  const rs = ((j && j.local_results && (Array.isArray(j.local_results) ? j.local_results : j.local_results.places)) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad'));
+  const rs = ((j && j.local_results && (Array.isArray(j.local_results) ? j.local_results : j.local_results.places)) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad')).slice(0, 20).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad'));
   const m = pickMatch(rs, r => r.title, normName(f.target));
   return m ? m.idx + 1 : null;
 }
@@ -264,6 +264,7 @@ async function recolter(K, jobs) {
       }
       if (/error/i.test(st)) { j.fait = true; j.err = (r.search_metadata.error || st); return; }
       j.fait = true; j.pos = parNom[j.name] ? posDe(parNom[j.name], r) : null;
+      if (j.pos === null) j.titres = ((r.local_results && r.local_results.places) || []).slice(0, 6).map(x => x.title);   // diagnostic
     } catch (e) { if (Date.now() - (j.t || 0) > ATTENTE_MAX_MS) { j.fait = true; j.err = 'timeout'; } }
   }));
   const parCle = {};
