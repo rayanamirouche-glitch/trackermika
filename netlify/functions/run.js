@@ -153,11 +153,11 @@ exports.handler = async (event) => {
       const kwEff = q.kw || String(over[f.name] || f.kw).split(/\s*[|;]\s*/)[0].trim();
       const u = 'https://serpapi.com/search.json?engine=google&q=' + encodeURIComponent(kwEff) + (q.engine === 'google_local' ? '' : '&lat=' + encodeURIComponent(String(f.ll).split(',')[0]) + '&lon=' + encodeURIComponent(String(f.ll).split(',')[1])) + (q.loc ? '&location=' + encodeURIComponent(q.loc) : '') + '&device=' + (q.device || 'mobile') + '&hl=fr' + (q.nogl === '1' ? '' : '&gl=' + core.paysDe(f) + '&google_domain=google.' + core.paysDe(f)) + (q.nocache === '0' ? '' : '&no_cache=true') + (q.async === '1' ? '&async=true' : '') + '&api_key=' + K;
       const t0 = Date.now();
-      const uMaps = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kwEff) + '&ll=' + encodeURIComponent('@' + f.ll + ',12z') + '&hl=fr&no_cache=true&api_key=' + K;
+      const uMaps = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kwEff) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&no_cache=true&api_key=' + K;
       const j = await fetch(q.engine === 'google_maps' ? uMaps : q.engine === 'google_local' ? u.replace('engine=google&', 'engine=google_local&') : u).then(r => r.json()).catch(e => ({ fetch_error: String(e) }));
-      const rs = ((j && j.local_results && j.local_results.places) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad'));
+      const rs = ((j && j.local_results && (Array.isArray(j.local_results) ? j.local_results : j.local_results.places)) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad')).slice(0, 20);
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({
-        fiche: f.name, index: i, kw: kwEff, kw_fichier: f.kw, ll: f.ll, duree_ms: Date.now() - t0, engine: q.engine || 'google', cles_reponse: Object.keys(j || {}).slice(0, 25), type_local: Array.isArray(j && j.local_results) ? 'array' : typeof (j && j.local_results), id: (j.search_metadata && j.search_metadata.id) || null, url_sans_cle: (q.engine === 'google_maps' ? uMaps : u).replace(/api_key=[^&]*/, 'api_key=…'),
+        fiche: f.name, index: i, kw: kwEff, kw_fichier: f.kw, ll: f.ll, duree_ms: Date.now() - t0, engine: q.engine || 'google', cles_reponse: Object.keys(j || {}).slice(0, 25), type_local: Array.isArray(j && j.local_results) ? 'array' : typeof (j && j.local_results), info: (j && j.search_information) || null, id: (j.search_metadata && j.search_metadata.id) || null, url_sans_cle: (q.engine === 'google_maps' ? uMaps : u).replace(/api_key=[^&]*/, 'api_key=…'),
         cle_serpapi_presente: !!K,
         erreur: j.error || j.fetch_error || null,
         statut: (j.search_metadata && j.search_metadata.status) || null,
