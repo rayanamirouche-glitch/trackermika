@@ -631,7 +631,9 @@ function render(){
   // Quand il est connu, c'est lui qui alimente la jauge d'objectif : « Google − base » devient
   // négatif dès que Google retire d'anciens avis, alors que les nôtres sont bien en ligne.
   const postesDe = f => livEff(f);
-  const gainDe = (f, n) => { const p = postesDe(f); return p !== null ? p : Math.max(0, n - BASE[f.name]); };
+  // Les avis postes saisis a la main priment sur tout : ils comptent meme si la fiche n'a pas
+  // encore de base de reference ou pas encore de releve Google (fiche recemment ajoutee).
+  const gainDe = (f, n) => { const p = postesDe(f); if (p !== null) return p; if (n == null || BASE[f.name] == null) return null; return Math.max(0, n - BASE[f.name]); };
   const hNb = document.getElementById('hNb'); if (hNb) hNb.textContent = fiches.length;
   ['hNb2','navNb'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = fiches.length; });
   const bC = document.getElementById('btnC3'); if (bC && !bC.disabled) bC.textContent = '🗓 3 jours (' + fiches.length + ' rech. SerpAPI)';
@@ -716,8 +718,9 @@ function render(){
     const obj = objEff(f);
     const objMan = (OBJ[f.name] != null && OBJ[f.name] !== '') ? '<span class="manuel">modifié</span>' : '';
     let objCell;
-    if (obj && BASE[f.name] != null && n != null) {
-      const gained = gainDe(f, n);
+    const gainNow = gainDe(f, n);
+    if (obj && gainNow !== null) {
+      const gained = gainNow;
       const pct = Math.min(100, Math.round(gained / obj * 100));
       const doneCls = gained >= obj ? ' done' : '';
       const fillCls = gained >= obj ? '' : ' part';
@@ -734,7 +737,7 @@ function render(){
         (f.ajout ? '<div class="ajout">ajoutée le ' + (f.ajout.date || '') + (admin ? ' <button class="del" onclick="supprimerFiche(\'' + f.ajout.id + '\',\'' + escAttr(f.name).replace(/'/g, "\\'") + '\')" title="Retirer cette fiche (admin)">✕</button>' : '') + '</div>' : '') + '</td>' +
       '<td class="fcity" data-label="Ville">' + f.city + '</td><td class="c-kw" data-label="Mots-clés">' + kwCell(f, i) + '</td><td data-label="Avis">' + avisCell + '</td><td data-label="Note">' + star + '</td><td data-label="Position">' + posCell + '</td><td data-label="Objectif">' + objCell + '</td>' + c3cell(f.name) + '</tr>';
     const _hasObj = !!obj;
-    const _gained = (_hasObj && BASE[f.name] != null && n != null) ? gainDe(f, n) : null;
+    const _gained = _hasObj ? gainNow : null;
     return { html: _html, name: f.name, metier: metierOf(kws[0] || f.kw), pos: pos, n: n, note: (a && a.r) ? a.r : null,
              hasObj: _hasObj, obj: obj, gained: _gained,
              pct: (_hasObj && _gained !== null) ? _gained / obj : null,
@@ -767,7 +770,7 @@ function render(){
     const o = objEff(f); if (!o) return;
     gObj += o;
     const a = aNow[f.name];
-    if (a && a.n != null && BASE[f.name] != null) gTot += gainDe(f, a.n);
+    const g = gainDe(f, (a && a.n != null) ? a.n : null); if (g !== null) gTot += g;
   });
   $('stObj').textContent = gObj ? '+' + gTot + ' / +' + gObj : '—';
   $('objFill').style.width = (gObj ? Math.min(100, gTot / gObj * 100) : 0) + '%';
@@ -921,7 +924,7 @@ function ouvrirFiche(i, tab){
   const rHist = rDates.map(d => ({ d, p: rank[d][f.name] }));
   const rLast = rHist[rHist.length - 1];
   const pid = ids[f.name], obj = objEff(f), postes = livEff(f);
-  const gained = (last && base[f.name] != null) ? (postes !== null ? postes : Math.max(0, last.n - base[f.name])) : null;
+  const gained = (postes !== null) ? postes : ((last && last.n != null && base[f.name] != null) ? Math.max(0, last.n - base[f.name]) : null);
   const mapsUrl = pid ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(f.name) + '&query_place_id=' + pid : f.link;
   const rk = RKW[f.name] || {}, kws = kwsOf(f);
   const posTxt = p => p === undefined ? '—' : p === null ? 'absent du bloc local' : '#' + p;
