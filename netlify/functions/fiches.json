@@ -398,5 +398,38 @@
   "city": "Paris",
   "link": "https://maps.app.goo.gl/3AD6AnbFpr7KZL6EA",
   "region": "IDF"
+ },
+ {
+  "name": "Clim paris 1",
+  "q": "Clim paris 1",
+  "target": "clim paris 1",
+  "ll": "48.867,2.324",
+  "kw": "climatisation paris 1",
+  "city": "Paris 1",
+  "link": "https://maps.app.goo.gl/NWGXmK6rzvxokKxE6",
+  "region": "IDF",
+  "type": "page"
+ },
+ {
+  "name": "CLIM Paris 3",
+  "q": "CLIM Paris 3",
+  "target": "clim paris 3",
+  "ll": "48.869,2.355",
+  "kw": "climatisation paris 2",
+  "city": "Paris 2",
+  "link": "https://maps.app.goo.gl/dN2YzmPS86MeLgYx9",
+  "region": "IDF",
+  "type": "page"
+ },
+ {
+  "name": "Clim Paris 12",
+  "q": "Clim Paris 12",
+  "target": "clim paris 12",
+  "ll": "48.845,2.408",
+  "kw": "climatisation paris 12",
+  "city": "Paris 12",
+  "link": "https://maps.app.goo.gl/D59R1Fw8amG6X3qa6",
+  "region": "IDF",
+  "type": "page"
  }
 ]
