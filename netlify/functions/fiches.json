@@ -431,5 +431,27 @@
   "link": "https://maps.app.goo.gl/D59R1Fw8amG6X3qa6",
   "region": "IDF",
   "type": "page"
+ },
+ {
+  "name": "Airchaud 27 – dépannage & entretien pompe à chaleur, Évreux",
+  "q": "Airchaud 27 – dépannage & entretien pompe à chaleur, Évreux",
+  "target": "airchaud 27",
+  "ll": "49.036,1.132",
+  "kw": "depannage pompe a chaleur 27",
+  "city": "Évreux",
+  "link": "https://www.google.com/maps/place/?q=place_id:ChIJy8ymJiI54UcRqSNx659_U88",
+  "region": "Eure",
+  "type": "page"
+ },
+ {
+  "name": "SOS Clim Assist 27, dépannage climatisation à Évreux",
+  "q": "SOS Clim Assist 27, dépannage climatisation à Évreux",
+  "target": "sos clim assist 27",
+  "ll": "49.024,1.156",
+  "kw": "depannage climatisation 27",
+  "city": "Évreux",
+  "link": "https://www.google.com/maps/place/?q=place_id:ChIJHdEBWeJH4UcRu53SZ5T4pKA",
+  "region": "Eure",
+  "type": "page"
  }
 ]
