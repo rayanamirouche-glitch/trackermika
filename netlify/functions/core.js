@@ -198,21 +198,32 @@ function paysDe(f) {
 }
 // Position dans le bloc local de GOOGLE RECHERCHE (mobile), vu depuis la ville de la fiche :
 // c'est ce qu'un client voit quand il tape « couvreur nice ». (Avant le 12/09/2026 : Google Maps.)
-// Depuis le 14/09/2026 les recherches sont SOUMISES en asynchrone (async=true) : SerpAPI repond
-// tout de suite avec un identifiant, et le resultat se lit ensuite dans son archive (gratuit).
-// Avant, la fonction attendait 4 a 9 s par recherche et Netlify la tuait a 10 s : la moitie des
-// fiches ressortait en « timeout » et gardait une position perimee.
-function serpUrl(f, kw, K) {
-  const [lat, lon] = String(f.ll || '').split(',');
-  const gl = paysDe(f);
-  return 'https://serpapi.com/search.json?engine=google&q=' + encodeURIComponent(kw) + '&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon)
-    // no_cache est indispensable meme en async : sans lui, SerpAPI ressert pendant 1 h le resultat
-    // d'une recherche qui a echoue (« We couldn't get valid results… ») et refuse la fiche a chaque essai.
-    + '&device=mobile&hl=fr&gl=' + gl + '&google_domain=google.' + gl + '&no_cache=true&async=true&api_key=' + K;
+// Depuis le 30/09/2026 les recherches passent par DataForSEO (SERP API Google Organic, file prioritaire,
+// environ 0,0012 $ la recherche) et non plus par SerpAPI (quota mensuel épuisé). Même principe asynchrone
+// qu'avant : la recherche est soumise (task_post, réponse immédiate avec un identifiant), puis la page
+// relit le résultat (task_get) toutes les 4 s ; Google répond en 15 à 60 s.
+const DFS = 'https://api.dataforseo.com/v3/';
+function dfsAuth() {
+  const l = process.env.DATAFORSEO_LOGIN, p = process.env.DATAFORSEO_PASSWORD;
+  return (l && p) ? 'Basic ' + Buffer.from(l + ':' + p).toString('base64') : null;
 }
-function posDe(f, j) {
-  const brut = (j && j.local_results) ? (Array.isArray(j.local_results) ? j.local_results : j.local_results.places) : null;
-  const rs = (brut || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad'));
+async function dfs(chemin, corps, ms) {
+  const A = dfsAuth(); if (!A) throw new Error('identifiants DataForSEO absents');
+  return to(fetch(DFS + chemin, { method: corps ? 'POST' : 'GET', headers: { Authorization: A, 'Content-Type': 'application/json' }, body: corps ? JSON.stringify(corps) : undefined }).then(r => r.json()), ms || 8000);
+}
+const LOC_PAYS = { fr: 2250, be: 2056, ch: 2756 };
+function dfsTache(f, kw, tag) {
+  const gl = paysDe(f);
+  const [lat, lon] = String(f.ll || '').split(',').map(Number);
+  const t = { keyword: kw, language_code: 'fr', device: 'mobile', os: 'android', se_domain: 'google.' + gl, depth: 10, priority: 2, tag: tag };
+  // rayon de 2 km autour de la ville de la fiche (comme le lat/lon envoyé à SerpAPI) ; sans coordonnées : le pays
+  if (Number.isFinite(lat) && Number.isFinite(lon) && (lat || lon)) t.location_coordinate = lat + ',' + lon + ',2000';
+  else t.location_code = LOC_PAYS[gl] || 2250;
+  return t;
+}
+function posDe(f, res) {
+  const rs = ((res && res.items) || []).filter(x => x.type === 'local_pack' && !x.is_paid)
+    .sort((a, b) => (a.rank_group || 0) - (b.rank_group || 0));
   if (!rs.length) return undefined;   // aucun bloc local dans la page rendue : on ne sait pas, ce n'est pas « absent »
   const m = pickMatch(rs, r => r.title, normName(f.target));
   return m ? m.idx + 1 : null;
@@ -227,26 +238,26 @@ async function soumettre(list, K, cle) {
   const taches = [];
   list.forEach(f => { kwsOf(f, over).forEach((kw, i) => { taches.push({ f: f, kw: kw, i: i }); }); });
   const jobs = []; let erreurs = 0, message = null;
-  // Soumission par petits paquets : 30 recherches lancees d'un coup, SerpAPI en refusait la moitie
-  // (« We couldn't get valid results… try again later »). Un refus est retente deux fois.
-  for (let k = 0; k < taches.length; k += 5) {
-    await Promise.all(taches.slice(k, k + 5).map(async t => {
-      let j = null;
-      for (let essai = 0; essai < 3; essai++) {
-        if (essai) await new Promise(r => setTimeout(r, 1500));
-        try { j = await to(fetch(serpUrl(t.f, t.kw, K)).then(r => r.json()), 5000); } catch (e) { j = { error: String(e && e.message ? e.message : e) }; }
-        if (j && !j.error) break;
-      }
-      if (!j || j.error) { erreurs++; message = (j && j.error) || 'reponse vide'; return; }
-      const st = j.search_metadata || {};
-      const job = { name: t.f.name, kw: t.kw, i: t.i, id: st.id, cle: cle, t: Date.now() };
-      if (j.local_results || /success/i.test(st.status || '')) { const p = posDe(t.f, j); job.fait = true; if (p === undefined) job.err = 'bloc local vide'; else job.pos = p; }
-      jobs.push(job);
-    }));
+  if (!K) return { jobs: jobs, erreurs: taches.length, message: 'identifiants DataForSEO absents' };
+  // Un seul envoi pour toute la vague (DataForSEO accepte 100 tâches par requête) ; un envoi refusé est retenté une fois.
+  for (let k = 0; k < taches.length; k += 100) {
+    const lot = taches.slice(k, k + 100);
+    let r = null;
+    for (let essai = 0; essai < 2 && !(r && Array.isArray(r.tasks)); essai++) {
+      if (essai) await new Promise(res => setTimeout(res, 1500));
+      try { r = await dfs('serp/google/organic/task_post', lot.map((t, n) => dfsTache(t.f, t.kw, String(k + n))), 6000); }
+      catch (e) { r = { status_message: String(e && e.message ? e.message : e) }; }
+    }
+    const tasks = (r && Array.isArray(r.tasks)) ? r.tasks : [];
+    lot.forEach((t, n) => {
+      const x = tasks.find(y => y && y.data && y.data.tag === String(k + n));
+      if (!x || x.status_code !== 20100) { erreurs++; message = (x && x.status_message) || (r && r.status_message) || 'reponse vide'; return; }
+      jobs.push({ name: t.f.name, kw: t.kw, i: t.i, id: x.id, cle: cle, t: Date.now() });
+    });
   }
   return { jobs: jobs, erreurs: erreurs, message: message };
 }
-// Lit dans l'archive SerpAPI les recherches encore en cours, puis ecrit chaque vague dont TOUTES les
+// Lit chez DataForSEO les recherches encore en cours, puis ecrit chaque vague dont TOUTES les
 // fiches sont pretes dans rankbatch/rankkw du jour (une seule ecriture par vague, jamais de
 // relecture-fusion sur une lecture eventuelle). Rend la file mise a jour a la page.
 async function recolter(K, jobs) {
@@ -254,22 +265,25 @@ async function recolter(K, jobs) {
   const parNom = {}; FICHES.forEach(f => { parNom[f.name] = f; });
   jobs = Array.isArray(jobs) ? jobs : [];
   let erreurs = 0, message = null;
-  await Promise.all(jobs.filter(j => !j.fait).map(async j => {
+  // au plus 60 lectures par appel (la page rappelle toutes les 4 s) : la fonction reste sous les 10 s de Netlify
+  await Promise.all(jobs.filter(j => !j.fait).slice(0, 60).map(async j => {
     try {
-      const r = await to(fetch('https://serpapi.com/searches/' + j.id + '.json?api_key=' + K).then(x => x.json()), 8000);
-      const st = String((r && r.search_metadata && r.search_metadata.status) || '');
-      j.st = st || (r && r.error ? 'err:' + String(r.error).slice(0, 60) : 'vide');   // diagnostic visible dans la file
-      if (r && r.error && !/processing|queued/i.test(String(r.error))) { j.fait = true; j.err = r.error; return; }
-      if (!r || !r.search_metadata || /processing|queued/i.test(st)) {
+      const r = await dfs('serp/google/organic/task_get/advanced/' + j.id, null, 7000);
+      if (r && r.status_code && r.status_code !== 20000) { j.fait = true; j.err = r.status_message || ('erreur ' + r.status_code); return; }
+      const t = r && Array.isArray(r.tasks) ? r.tasks[0] : null;
+      const sc = t ? t.status_code : null;
+      j.st = String(sc || 'vide');   // diagnostic visible dans la file
+      if (!t || sc === 40601 || sc === 40602) {   // tâche transmise ou en file : on relira
         if (Date.now() - (j.t || 0) > ATTENTE_MAX_MS) { j.fait = true; j.err = 'timeout'; }
         return;
       }
-      if (/error/i.test(st)) { j.fait = true; j.err = (r.search_metadata.error || st); return; }
-      const p = parNom[j.name] ? posDe(parNom[j.name], r) : null;
+      if (sc !== 20000) { j.fait = true; j.err = t.status_message || ('erreur ' + sc); return; }
+      const res = (t.result || [])[0];
+      const p = parNom[j.name] ? posDe(parNom[j.name], res) : null;
       // Page rendue sans bloc local (ca arrive sur mobile) : erreur a retenter, pas une absence.
       if (p === undefined) { j.fait = true; j.err = 'bloc local vide'; return; }
       j.fait = true; j.pos = p;
-      if (j.pos === null) j.titres = ((r.local_results && r.local_results.places) || []).slice(0, 6).map(x => x.title);   // diagnostic
+      if (j.pos === null) j.titres = ((res && res.items) || []).filter(x => x.type === 'local_pack').slice(0, 6).map(x => x.title);   // diagnostic
     } catch (e) { if (Date.now() - (j.t || 0) > ATTENTE_MAX_MS) { j.fait = true; j.err = 'timeout'; } }
   }));
   const parCle = {};
@@ -315,7 +329,7 @@ async function recolter(K, jobs) {
 async function snapRank(start, baseUrl) {
   await chargerFiches();
   await chargerFiches();
-  const K = process.env.SERPAPI_KEY;
+  const K = dfsAuth();
   start = start || 0;
   // La page envoie des vagues de 5 fiches (15 recherches max par appel) ; la cle d'ecriture reste
   // alignee sur WAVE (10) pour que rankHist retrouve les blobs : deux demi-vagues partagent une cle.
@@ -330,7 +344,7 @@ async function snapRank(start, baseUrl) {
 async function snapRankSel(names) {
   await chargerFiches();
   await chargerFiches();
-  const K = process.env.SERPAPI_KEY;
+  const K = dfsAuth();
   const voulu = new Set(names || []);
   const sel = FICHES.filter(f => voulu.has(f.name)).slice(0, 40);
   const r = await soumettre(sel, K, 'sel');
@@ -438,4 +452,4 @@ async function snapAvisOne(idx) {
   return { ok: true, n: v.n, r: v.r, tel: j.nationalPhoneNumber || null, web: j.websiteUri || null };
 }
 
-module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, recolter, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch, paysDe };
+module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, recolter, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch, paysDe, dfsAuth, dfs, dfsTache };

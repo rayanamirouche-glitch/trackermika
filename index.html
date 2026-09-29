@@ -393,7 +393,7 @@ function kwCell(f, i){
 function updSelBtn(){
   var b = $('btnSel'); if (!b || b.disabled) return;
   var rech = 0; (DATA ? DATA.fiches : []).forEach(function(f){ if (SEL.has(f.name)) rech += kwsOf(f).length; });
-  b.textContent = '📍 Classement des cochées (' + SEL.size + (SEL.size ? ' · ' + rech + ' rech. SerpAPI' : '') + ')';
+  b.textContent = '📍 Classement des cochées (' + SEL.size + (SEL.size ? ' · ' + rech + ' rech. Google' : '') + ')';
 }
 function toggleSel(cb){
   var n = DATA.fiches[parseInt(cb.dataset.i, 10)].name;
@@ -466,12 +466,12 @@ async function editLiv(i){
     render(); msg('Postés de « ' + f.name + ' » : ' + (livEff(f) != null ? '+' + livEff(f) : '—') + ' ✓');
   } catch (e) { msg('Non enregistré — ' + e.message); }
 }
-// Les recherches Google sont soumises a SerpAPI sans attendre (async), puis lues toutes les 4 s
+// Les recherches Google sont soumises a DataForSEO sans attendre (async), puis lues toutes les 4 s
 // jusqu'a ce que chaque fiche ait sa position (2 min max). Avant, la fonction Netlify attendait
 // Google et etait tuee a 10 s : la moitie des fiches sortait en « timeout ».
 async function recolterTout(etat){
   const res = [];
-  // Google met parfois plusieurs minutes a repondre via la file SerpAPI : on lit jusqu'a 5 min.
+  // Google met parfois plusieurs minutes a repondre via la file DataForSEO : on lit jusqu'a 5 min.
   for (let t = 0; t < 48 && etat.attente > 0; t++) {
     await new Promise(function(r){ setTimeout(r, 4000); });
     msg('Lecture des résultats — ' + etat.releves + ' fiche(s) relevée(s), ' + etat.attente + ' en attente…');
@@ -491,7 +491,7 @@ async function runRankSel(){
   const names = DATA.fiches.map(function(f){ return f.name; }).filter(function(n){ return SEL.has(n); });
   if (!names.length) { msg('Coche d’abord les fiches à mesurer (case à gauche de chaque ligne)'); return; }
   var rech = 0; DATA.fiches.forEach(function(f){ if (SEL.has(f.name)) rech += kwsOf(f).length; });
-  if (!confirm('Relever le classement de ' + names.length + ' fiche(s) ? (' + rech + ' recherche(s) SerpAPI)')) return;
+  if (!confirm('Relever le classement de ' + names.length + ' fiche(s) ? (' + rech + ' recherche(s) Google)')) return;
   $('btnSel').disabled = true;
   const etat = { jobs: [], releves: 0, attente: 0, erreurs: 0, motif: null };
   try {
@@ -636,7 +636,7 @@ function render(){
   const gainDe = (f, n) => { const p = postesDe(f); if (p !== null) return p; if (n == null || BASE[f.name] == null) return null; return Math.max(0, n - BASE[f.name]); };
   const hNb = document.getElementById('hNb'); if (hNb) hNb.textContent = fiches.length;
   ['hNb2','navNb'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = fiches.length; });
-  const bC = document.getElementById('btnC3'); if (bC && !bC.disabled) bC.textContent = '🗓 3 jours (' + fiches.length + ' rech. SerpAPI)';
+  const bC = document.getElementById('btnC3'); if (bC && !bC.disabled) bC.textContent = '🗓 3 jours (' + fiches.length + ' lectures Google)';
   const bA = document.getElementById('btnAvis'); if (bA && !bA.disabled) bA.textContent = '↻ Actualiser AVIS (' + fiches.length + ' fiches · ' + (fiches.length * 0.02).toFixed(2).replace('.', ',') + ' $)';
   if (admin) $('btnRecale').style.display = '';
   // Un relevé du jour peut être partiel (vague en échec) : chaque fiche garde sa dernière valeur
@@ -816,7 +816,7 @@ async function runAvis(){
 
 async function runRank(){
   var rech = 0; (DATA ? DATA.fiches : []).forEach(function(f){ rech += kwsOf(f).length; });
-  if(!confirm('Relever les classements de toutes les fiches maintenant ? (' + rech + ' recherches SerpAPI)')) return;
+  if(!confirm('Relever les classements de toutes les fiches maintenant ? (' + rech + ' recherches Google)')) return;
   $('btnRank').disabled = true;
   const n = (DATA && DATA.fiches ? DATA.fiches.length : 43);
   const waves = [];
@@ -841,7 +841,7 @@ async function runRank(){
     }
     await recolterTout(etat);
     // Fiches sans position (soumission refusee ou recherche en erreur) : jusqu'a 4 nouvelles
-    // tentatives espacees de 30 s, SerpAPI refuse par vagues puis accepte de nouveau.
+    // tentatives espacees de 30 s (recherche refusee ou page Google sans bloc local).
     for (let passe = 0; passe < 4; passe++) {
       const manquantes = DATA.fiches.map(function(f){ return f.name; }).filter(function(n){ return !etat.jobs.some(function(j){ return j.name === n && j.fait && !j.err; }); });
       if (!manquantes.length || manquantes.length >= n) break;
@@ -877,21 +877,28 @@ async function runC3(){
   const b=$('btnC3');b.disabled=true;
   C3={};
   const NN=DATA.fiches?DATA.fiches.length:0;
-  let t0=0,t1=0,t2=0;
-  for(let s=0;s<NN;s+=3){
-    msg('Comptage 3 jours — fiches '+(s+1)+'–'+Math.min(s+3,NN)+' / '+NN+'…');
+  let jobs=[],motif=null;
+  // Lectures soumises a DataForSEO par paquets de 20 fiches, puis relues toutes les 5 s (Google repond en 1 a 2 min)
+  for(let s=0;s<NN;s+=20){
+    msg('Comptage 3 jours — envoi des fiches '+(s+1)+'–'+Math.min(s+20,NN)+' / '+NN+'…');
     try{
-      const r=await fetch('/.netlify/functions/count3j?start='+s+'&n=3');
-      const j=await r.json();C3DAYS=j.days;
-      for(const k in j.results){
-        C3[k]=j.results[k];
-        const c=j.results[k];
-        if(!c.err){t0+=c.j0;t1+=c.j1;t2+=c.j2;}
-      }
+      const j=await fetch('/.netlify/functions/count3j?start='+s+'&n=20').then(r=>r.json());
+      if(j.days)C3DAYS=j.days; Object.assign(C3,j.results||{}); jobs=jobs.concat(j.jobs||[]); if(j.erreur)motif=j.erreur;
+    }catch(e){}
+  }
+  render();
+  for(let t=0;t<60&&jobs.length;t++){
+    await new Promise(r=>setTimeout(r,5000));
+    msg('Comptage 3 jours — '+Object.keys(C3).length+' / '+NN+' fiches lues…');
+    try{
+      const j=await fetch('/.netlify/functions/count3j',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jobs})}).then(r=>r.json());
+      if(j.days)C3DAYS=j.days; Object.assign(C3,j.results||{}); if(Array.isArray(j.jobs))jobs=j.jobs;
       render();
     }catch(e){}
   }
-  msg('3 jours ✓ — avant-hier '+t2+' · hier '+t1+' · aujourd\'hui '+t0+' (avis visibles sur Google)');
+  let t0=0,t1=0,t2=0;
+  for(const k in C3){const c=C3[k];if(c&&!c.err){t0+=c.j0;t1+=c.j1;t2+=c.j2;}}
+  msg('3 jours ✓ — avant-hier '+t2+' · hier '+t1+' · aujourd\'hui '+t0+' (avis visibles sur Google)'+(jobs.length?' · '+jobs.length+' fiche(s) sans réponse':'')+(motif?' — '+motif:''));
   b.disabled=false;
 }
 async function recaleBase(){

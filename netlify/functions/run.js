@@ -132,44 +132,36 @@ exports.handler = async (event) => {
       if (rank[q.date]) { delete rank[q.date]; await store.setJSON('rank', rank); dansRank = true; }
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: true, date: q.date, vagues_supprimees: supprimes, retire_du_blob_rank: dansRank }) };
     }
-    if (q.type === 'serpapi') {
-      const K = process.env.SERPAPI_KEY;
-      const j = await fetch('https://serpapi.com/account?api_key=' + K).then(r => r.json()).catch(e => ({ erreur: String(e) }));
+    if (q.type === 'serpapi' || q.type === 'dataforseo') {
+      // Solde DataForSEO : les recherches Google (classement, « 3 jours ») y passent depuis le 30/09/2026
+      let j = null;
+      try { j = await core.dfs('appendix/user_data', null, 8000); } catch (e) { j = { status_message: String(e.message || e) }; }
+      const u = j && j.tasks && j.tasks[0] && j.tasks[0].result && j.tasks[0].result[0];
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({
-        plan: j.plan_name || null,
-        recherches_du_mois: j.searches_per_month != null ? j.searches_per_month : null,
-        utilisees: j.this_month_usage != null ? j.this_month_usage : null,
-        restantes: j.total_searches_left != null ? j.total_searches_left : null,
-        reinitialisation: j.account_rate_limit_per_hour != null ? ('limite horaire ' + j.account_rate_limit_per_hour) : null,
-        erreur: j.error || j.erreur || null
+        fournisseur: 'DataForSEO', solde_usd: u && u.money ? u.money.balance : null,
+        identifiants_presents: !!core.dfsAuth(), erreur: u ? null : ((j && j.status_message) || 'reponse vide')
       }, null, 1) };
     }
     if (q.type === 'rankdiag') {
-      const K = process.env.SERPAPI_KEY;
+      // Diagnostic d'une recherche de classement, en direct (DataForSEO live, ~0,002 $) : ?i=<index>&kw=<mot-cle facultatif>
+      await core.chargerFiches();
       const i = parseInt(q.i || '0', 10);
-      const f = FICHES[i];
-      if (!f) return { statusCode: 400, body: JSON.stringify({ error: 'index hors bornes', total: FICHES.length }) };
+      const f = core.fiches()[i];
+      if (!f) return { statusCode: 400, body: JSON.stringify({ error: 'index hors bornes', total: core.fiches().length }) };
       const over = (await getStore('tracker').get('kw', { type: 'json' }).catch(() => null)) || {};
       const kwEff = q.kw || String(over[f.name] || f.kw).split(/\s*[|;]\s*/)[0].trim();
-      const u = 'https://serpapi.com/search.json?engine=google&q=' + encodeURIComponent(kwEff) + (q.engine === 'google_local' ? '' : '&lat=' + encodeURIComponent(String(f.ll).split(',')[0]) + '&lon=' + encodeURIComponent(String(f.ll).split(',')[1])) + (q.loc ? '&location=' + encodeURIComponent(q.loc) : '') + '&device=' + (q.device || 'mobile') + '&hl=fr' + (q.nogl === '1' ? '' : '&gl=' + core.paysDe(f) + '&google_domain=google.' + core.paysDe(f)) + (q.nocache === '0' ? '' : '&no_cache=true') + (q.async === '1' ? '&async=true' : '') + '&api_key=' + K;
+      const tache = core.dfsTache(f, kwEff, 'diag'); delete tache.priority;
       const t0 = Date.now();
-      const uMaps = 'https://serpapi.com/search.json?engine=google_maps&q=' + encodeURIComponent(kwEff) + '&ll=' + encodeURIComponent('@' + f.ll + ',14z') + '&hl=fr&no_cache=true&api_key=' + K;
-      const j = await fetch(q.engine === 'google_maps' ? uMaps : q.engine === 'google_local' ? u.replace('engine=google&', 'engine=google_local&') : u).then(r => r.json()).catch(e => ({ fetch_error: String(e) }));
-      const rs = ((j && j.local_results && (Array.isArray(j.local_results) ? j.local_results : j.local_results.places)) || []).filter(x => !(x.sponsored || x.is_paid || x.type === 'ad')).slice(0, 20);
+      let j = null; try { j = await core.dfs('serp/google/organic/live/advanced', [tache], 9000); } catch (e) { j = { status_message: String(e.message || e) }; }
+      const t = j && j.tasks && j.tasks[0]; const res = t && t.result && t.result[0];
+      const rs = ((res && res.items) || []).filter(x => x.type === 'local_pack' && !x.is_paid).sort((a, b) => (a.rank_group || 0) - (b.rank_group || 0));
+      const m = core.pickMatch(rs, r => r.title, core.normName(f.target));
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({
-        fiche: f.name, index: i, kw: kwEff, kw_fichier: f.kw, ll: f.ll, duree_ms: Date.now() - t0, engine: q.engine || 'google', cles_reponse: Object.keys(j || {}).slice(0, 25), type_local: Array.isArray(j && j.local_results) ? 'array' : typeof (j && j.local_results), info: (j && j.search_information) || null, id: (j.search_metadata && j.search_metadata.id) || null, url_sans_cle: (q.engine === 'google_maps' ? uMaps : u).replace(/api_key=[^&]*/, 'api_key=…'),
-        cle_serpapi_presente: !!K,
-        erreur: j.error || j.fetch_error || null,
-        statut: (j.search_metadata && j.search_metadata.status) || null,
-        nb_resultats: rs.length,
-        target: f.target,
-        position_trouvee: (() => {
-          const norm = s => (s || '').toLowerCase().replace(/[\u2018\u2019\u02BC\u0060\u00B4]/g, "'").normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.\-]/g, ' ').replace(/\bsaint\b/g, 'st').replace(/\s+/g, ' ').trim();
-          const t = norm(f.target);
-          for (let i = 0; i < rs.length; i++) { const n = norm(rs[i].title); if (n === t || n.includes(t)) return i + 1; }
-          return null;
-        })(),
-        tous_les_titres: rs.map((r, i) => (i + 1) + '. ' + r.title)
+        fiche: f.name, index: i, kw: kwEff, kw_fichier: f.kw, ll: f.ll, duree_ms: Date.now() - t0, requete: tache,
+        lien_google: (res && res.check_url) || null, types: (res && res.item_types) || null,
+        erreur: t ? (t.status_code !== 20000 ? t.status_message : null) : ((j && j.status_message) || 'reponse vide'),
+        nb_resultats: rs.length, target: f.target, position_trouvee: m ? m.idx + 1 : null,
+        tous_les_titres: rs.map((r, k) => (k + 1) + '. ' + r.title)
       }, null, 1) };
     }
     if (q.type === 'audit') {
@@ -349,7 +341,7 @@ exports.handler = async (event) => {
       // appels, a rappeler avec la file renvoyee jusqu'a en_attente = 0.
       let payload = {};
       try { payload = JSON.parse(event.body || '{}'); } catch (e) { payload = {}; }
-      const rk = await core.recolter(process.env.SERPAPI_KEY, payload.jobs || []);
+      const rk = await core.recolter(core.dfsAuth(), payload.jobs || []);
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(rk) };
     } else {
       return { statusCode: 400, body: JSON.stringify({ error: 'type avis|rank|relink|diag requis' }) };
