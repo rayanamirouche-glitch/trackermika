@@ -438,5 +438,60 @@
     "link": "https://www.google.com/maps/place/?q=place_id:ChIJHdEBWeJH4UcRu53SZ5T4pKA",
     "region": "Eure",
     "type": "page"
+  },
+  {
+    "name": "Le Fourneau de Senlis, dépannage & entretien chaudière gaz et fioul",
+    "q": "Le Fourneau de Senlis, dépannage & entretien chaudière gaz et fioul",
+    "target": "le fourneau de senlis",
+    "ll": "49.2033,2.5823",
+    "kw": "depannage chaudiere 60",
+    "city": "Senlis",
+    "link": "https://maps.app.goo.gl/kJEYJW3EEbafzchk6",
+    "region": "Oise",
+    "type": "page"
+  },
+  {
+    "name": "Votre pompe à chaleur tombe en panne à Senlis ? Dépannage & entretien Oise – Pacifique Énergies",
+    "q": "Votre pompe à chaleur tombe en panne à Senlis ? Dépannage & entretien Oise – Pacifique Énergies",
+    "target": "pacifique energies",
+    "ll": "49.2097,2.5889",
+    "kw": "depannage pompe a chaleur 60",
+    "city": "Senlis",
+    "link": "https://maps.app.goo.gl/VuonCHqJVHgTzuVp8",
+    "region": "Oise",
+    "type": "page"
+  },
+  {
+    "name": "- Pacynergie – entretien & dépannage pompe à chaleur, Senlis (Oise)",
+    "q": "- Pacynergie – entretien & dépannage pompe à chaleur, Senlis (Oise)",
+    "target": "pacynergie",
+    "ll": "49.2015,2.5740",
+    "kw": "depannage pompe a chaleur 60",
+    "city": "Senlis",
+    "link": "https://maps.app.goo.gl/a1L9nVS5CGj7bSbo9",
+    "region": "Oise",
+    "type": "page"
+  },
+  {
+    "name": "étincelle chantilly entretien et dépannage chaudière",
+    "q": "étincelle chantilly entretien et dépannage chaudière",
+    "target": "etincelle chantilly",
+    "ll": "49.1741,2.4577",
+    "kw": "depannage chaudiere 60",
+    "city": "Chantilly",
+    "link": "https://maps.app.goo.gl/xDVVRXwEB4jADuVJ8",
+    "region": "Oise",
+    "type": "page"
+  },
+  {
+    "name": "Pompair Pompe à chaleur Nanterre & Hauts-de-Seine",
+    "q": "Pompair Pompe à chaleur Nanterre & Hauts-de-Seine",
+    "target": "pompair pompe a",
+    "ll": "48.8883,2.2040",
+    "kw": "depannage pompe a chaleur 92",
+    "city": "Nanterre",
+    "link": "https://maps.app.goo.gl/uE1Rbe8cRVuVH8h86",
+    "region": "IDF",
+    "type": "page"
   }
 ]
