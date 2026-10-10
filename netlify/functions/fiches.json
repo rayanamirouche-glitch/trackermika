@@ -235,16 +235,6 @@
     "region": "IDF"
   },
   {
-    "name": "Thermarne – depannage pompe à chaleur, Val-de-Marne et entretien (la Marne)",
-    "q": "Thermarne – depannage pompe à chaleur, Val-de-Marne et entretien (la Marne)",
-    "target": "thermarne – depannage",
-    "ll": "48.7917,2.4845",
-    "kw": "depannage pompe a chaleur 94",
-    "city": "Saint-Maur-des-Fossés",
-    "link": "https://maps.app.goo.gl/XtogyrxpcBQwaE7Y7",
-    "region": "IDF"
-  },
-  {
     "name": "Aircalor entretien pompe à chaleur et dépannage",
     "q": "Aircalor entretien pompe à chaleur et dépannage",
     "target": "aircalor entretien pompe",
@@ -312,16 +302,6 @@
     "kw": "depannage chaudiere 92",
     "city": "Boulogne-Billancourt",
     "link": "https://maps.app.goo.gl/GQ6G8HUGSdPbws187",
-    "region": "IDF"
-  },
-  {
-    "name": "Foehn Énergie Pompe à chaleur Versailles & Yvelines",
-    "q": "Foehn Énergie Pompe à chaleur Versailles & Yvelines",
-    "target": "foehn energie pompe",
-    "ll": "48.8126,1.8804",
-    "kw": "depannage pompe a chaleur 78",
-    "city": "Villiers-Saint-Frédéric",
-    "link": "https://maps.app.goo.gl/bD9gGdcH97SgLo8x6",
     "region": "IDF"
   },
   {
