@@ -212,10 +212,14 @@ async function dfs(chemin, corps, ms) {
   return to(fetch(DFS + chemin, { method: corps ? 'POST' : 'GET', headers: { Authorization: A, 'Content-Type': 'application/json' }, body: corps ? JSON.stringify(corps) : undefined }).then(r => r.json()), ms || 8000);
 }
 const LOC_PAYS = { fr: 2250, be: 2056, ch: 2756 };
-function dfsTache(f, kw, tag) {
+function dfsTache(f, kw, tag, device) {
   const gl = paysDe(f);
   const [lat, lon] = String(f.ll || '').split(',').map(Number);
-  const t = { keyword: kw, language_code: 'fr', device: 'mobile', os: 'android', se_domain: 'google.' + gl, depth: 10, priority: 2, tag: tag };
+  // Mobile par defaut (bloc local du telephone). En desktop quand la page mobile rendue n'a pas de
+  // bloc local (Google y met parfois un bloc hotels a la place, vu le 14 et le 18/10/2026).
+  const t = device === 'desktop'
+    ? { keyword: kw, language_code: 'fr', device: 'desktop', se_domain: 'google.' + gl, depth: 10, priority: 2, tag: tag }
+    : { keyword: kw, language_code: 'fr', device: 'mobile', os: 'android', se_domain: 'google.' + gl, depth: 10, priority: 2, tag: tag };
   // rayon de 2 km autour de la ville de la fiche (comme le lat/lon envoyé à SerpAPI) ; sans coordonnées : le pays
   if (Number.isFinite(lat) && Number.isFinite(lon) && (lat || lon)) t.location_coordinate = lat + ',' + lon + ',2000';
   else t.location_code = LOC_PAYS[gl] || 2250;
@@ -280,8 +284,17 @@ async function recolter(K, jobs) {
       if (sc !== 20000) { j.fait = true; j.err = t.status_message || ('erreur ' + sc); return; }
       const res = (t.result || [])[0];
       const p = parNom[j.name] ? posDe(parNom[j.name], res) : null;
-      // Page rendue sans bloc local (ca arrive sur mobile) : erreur a retenter, pas une absence.
-      if (p === undefined) { j.fait = true; j.err = 'bloc local vide'; return; }
+      // Page mobile rendue sans bloc local (Google y met un bloc hotels) : on resoumet la meme
+      // recherche en desktop, une seule fois ; si le desktop n'a pas de bloc non plus, c'est un echec.
+      if (p === undefined) {
+        if (j.dev === 'desktop' || !parNom[j.name]) { j.fait = true; j.err = 'bloc local vide'; return; }
+        try {
+          const r2 = await dfs('serp/google/organic/task_post', [dfsTache(parNom[j.name], j.kw, 'd', 'desktop')], 6000);
+          const x = r2 && Array.isArray(r2.tasks) ? r2.tasks[0] : null;
+          if (x && x.status_code === 20100) { j.id = x.id; j.dev = 'desktop'; j.t = Date.now(); j.st = 'desktop'; return; }
+        } catch (e) { /* on tombe sur l'echec ci-dessous */ }
+        j.fait = true; j.err = 'bloc local vide'; return;
+      }
       j.fait = true; j.pos = p;
       if (j.pos === null) j.titres = ((res && res.items) || []).filter(x => x.type === 'local_pack').slice(0, 6).map(x => x.title);   // diagnostic
     } catch (e) { if (Date.now() - (j.t || 0) > ATTENTE_MAX_MS) { j.fait = true; j.err = 'timeout'; } }
