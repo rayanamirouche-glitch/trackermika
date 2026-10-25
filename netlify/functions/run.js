@@ -155,13 +155,13 @@ exports.handler = async (event) => {
       let j = null; try { j = await core.dfs('serp/google/organic/live/advanced', [tache], 9000); } catch (e) { j = { status_message: String(e.message || e) }; }
       const t = j && j.tasks && j.tasks[0]; const res = t && t.result && t.result[0];
       const rs = ((res && res.items) || []).filter(x => x.type === 'local_pack' && !x.is_paid).sort((a, b) => (a.rank_group || 0) - (b.rank_group || 0));
-      const m = core.pickMatch(rs, r => r.title, core.normName(f.target));
+      const ib = core.trouveBloc(f, rs); const m = ib >= 0 ? { idx: ib } : null;
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({
         fiche: f.name, index: i, kw: kwEff, kw_fichier: f.kw, ll: f.ll, duree_ms: Date.now() - t0, requete: tache,
         lien_google: (res && res.check_url) || null, types: (res && res.item_types) || null,
         erreur: t ? (t.status_code !== 20000 ? t.status_message : null) : ((j && j.status_message) || 'reponse vide'),
         nb_resultats: rs.length, target: f.target, position_trouvee: m ? m.idx + 1 : null,
-        tous_les_titres: rs.map((r, k) => (k + 1) + '. ' + r.title)
+        kg_fiche: f.kg || null, tous_les_titres: rs.map((r, k) => (k + 1) + '. ' + r.title + ' [' + (core.kgItem(r) || '?') + ']')
       }, null, 1) };
     }
     if (q.type === 'audit') {

@@ -225,12 +225,32 @@ function dfsTache(f, kw, tag, device) {
   else t.location_code = LOC_PAYS[gl] || 2250;
   return t;
 }
+// Identifiant Google (« /g/… ») d'un résultat du bloc local, lu dans son lien searchviewer (?svid=<protobuf base64>).
+// DataForSEO ne renvoie plus le cid des résultats (vu le 25/10/2026) ; le svid, lui, porte l'identifiant exact.
+function kgItem(x) {
+  const s = /[?&]svid=([A-Za-z0-9_-]+)/.exec((x && x.url) || '');
+  if (!s) return null;
+  try { const m = /\/[gm]\/[0-9a-z_]+/.exec(Buffer.from(s[1], 'base64url').toString('latin1')); return m ? m[0] : null; }
+  catch (e) { return null; }
+}
+// Rang (index 0-based) de la fiche f dans le bloc local rs, -1 si absente. 25/10/2026 : reconnaissance par
+// l'identifiant Google f.kg (fiches.json) ; si Google ne donne pas d'identifiant, nom complet identique ;
+// l'ancien rapprochement sur les 3 premiers mots (« couvreur nice … ») ne sert plus que pour une fiche sans kg.
+function trouveBloc(f, rs) {
+  const kgs = rs.map(kgItem);
+  if (f.kg && kgs.some(Boolean)) return kgs.indexOf(f.kg);
+  const n = normName(f.name);
+  const i = rs.findIndex(x => normName(x.title) === n);
+  if (i >= 0 || f.kg) return i;
+  const m = pickMatch(rs, x => x.title, normName(f.target));
+  return m ? m.idx : -1;
+}
 function posDe(f, res) {
   const rs = ((res && res.items) || []).filter(x => x.type === 'local_pack' && !x.is_paid)
     .sort((a, b) => (a.rank_group || 0) - (b.rank_group || 0));
   if (!rs.length) return undefined;   // aucun bloc local dans la page rendue : on ne sait pas, ce n'est pas « absent »
-  const m = pickMatch(rs, r => r.title, normName(f.target));
-  return m ? m.idx + 1 : null;
+  const i = trouveBloc(f, rs);
+  return i >= 0 ? i + 1 : null;
 }
 const ATTENTE_MAX_MS = 180000;   // au-dela (3 min ; Google mobile repond en 30-60 s), la recherche est comptee en echec et resoumise
 // Soumet toutes les recherches (fiche x mot-cle) d'une liste de fiches, sans attendre Google.
@@ -465,4 +485,4 @@ async function snapAvisOne(idx) {
   return { ok: true, n: v.n, r: v.r, tel: j.nationalPhoneNumber || null, web: j.websiteUri || null };
 }
 
-module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, recolter, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch, paysDe, dfsAuth, dfs, dfsTache };
+module.exports = { snapAvis, snapAvisOne, snapRank, snapRankSel, recolter, allData, rankCooldown, relink, chargerFiches, fiches: () => FICHES, getJSON, setJSON, normName, pickMatch, trouveBloc, kgItem, paysDe, dfsAuth, dfs, dfsTache };
