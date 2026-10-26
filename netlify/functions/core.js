@@ -3,11 +3,13 @@ let FICHES = FICHES_JSON.slice();
 // Fiches ajoutees depuis le tracker (bouton + Fiche, blob 'ajouts'). Une fiche ajoutee dont le lien
 // figure deja dans fiches.json (passee par le menage entre-temps) est ignoree : pas de doublon.
 const cleLien = l => { const m = /goo\.gl\/([A-Za-z0-9]+)/.exec(l || '') || /place_id[:=]([A-Za-z0-9_\-]+)/.exec(l || ''); return m ? m[1] : (l || ''); };
+// 26/10/2026 : identifiant Google (kg, cid) des fiches ajoutées depuis la page, par clé de lien (gen/trackers_kg/enrichir_ajouts.py)
+const KG_AJOUTS = require('./kg_ajouts.json');
 async function chargerFiches() {
   const aj = await getJSON('ajouts', {});
   const connus = new Set(FICHES_JSON.map(f => cleLien(f.link)));
   const noms = new Set(FICHES_JSON.map(f => f.name));
-  const extra = Object.keys(aj).sort().map(id => Object.assign({}, aj[id], { ajout: { id: id, date: aj[id].date || '' } }))
+  const extra = Object.keys(aj).sort().map(id => Object.assign({}, KG_AJOUTS[cleLien(aj[id].link)] || {}, aj[id], { ajout: { id: id, date: aj[id].date || '' } }))
     .filter(f => !connus.has(cleLien(f.link)) && !noms.has(f.name));
   FICHES = FICHES_JSON.concat(extra);
   return FICHES;
