@@ -125,18 +125,6 @@
   "cid": "3387209626246583668"
  },
  {
-  "name": "La climique de bobigny",
-  "q": "La climique de bobigny",
-  "target": "la climique de",
-  "ll": "48.906,2.439",
-  "kw": "climatisation bobigny",
-  "city": "Bobigny",
-  "link": "https://maps.app.goo.gl/3xN9GuoWBq6vuvjL7",
-  "region": "IDF",
-  "kg": "/g/11zgvm4sns",
-  "cid": "9096489625774620242"
- },
- {
   "name": "Paris 8ème sofamega climatisation",
   "q": "Paris 8ème sofamega climatisation",
   "target": "paris 8eme sofamega",
@@ -463,17 +451,6 @@
   "cid": "10386010562116307462"
  },
  {
-  "name": "Clim Paris 12",
-  "q": "Clim Paris 12",
-  "target": "clim paris 12",
-  "ll": "48.845,2.408",
-  "kw": "climatisation paris 12",
-  "city": "Paris 12",
-  "link": "https://maps.app.goo.gl/D59R1Fw8amG6X3qa6",
-  "region": "IDF",
-  "type": "page"
- },
- {
   "name": "Airchaud 27 – dépannage & entretien pompe à chaleur, Évreux",
   "q": "Airchaud 27 – dépannage & entretien pompe à chaleur, Évreux",
   "target": "airchaud 27",
@@ -511,43 +488,6 @@
   "type": "page",
   "kg": "/g/11zy30vj4r",
   "cid": "11029483030509401060"
- },
- {
-  "name": "Votre pompe à chaleur tombe en panne à Senlis ? Dépannage & entretien Oise – Pacifique Énergies",
-  "q": "Votre pompe à chaleur tombe en panne à Senlis ? Dépannage & entretien Oise – Pacifique Énergies",
-  "target": "pacifique energies",
-  "ll": "49.2097,2.5889",
-  "kw": "depannage pompe a chaleur 60",
-  "city": "Senlis",
-  "link": "https://maps.app.goo.gl/VuonCHqJVHgTzuVp8",
-  "region": "Oise",
-  "type": "page"
- },
- {
-  "name": "- Pacynergie – entretien & dépannage pompe à chaleur, Senlis (Oise)",
-  "q": "- Pacynergie – entretien & dépannage pompe à chaleur, Senlis (Oise)",
-  "target": "pacynergie",
-  "ll": "49.2015,2.5740",
-  "kw": "depannage pompe a chaleur 60",
-  "city": "Senlis",
-  "link": "https://maps.app.goo.gl/a1L9nVS5CGj7bSbo9",
-  "region": "Oise",
-  "type": "page",
-  "kg": "/g/11zz2hqwpd",
-  "cid": "8064515689961072630"
- },
- {
-  "name": "étincelle chantilly entretien et dépannage chaudière",
-  "q": "étincelle chantilly entretien et dépannage chaudière",
-  "target": "etincelle chantilly",
-  "ll": "49.1741,2.4577",
-  "kw": "depannage chaudiere 60",
-  "city": "Chantilly",
-  "link": "https://maps.app.goo.gl/xDVVRXwEB4jADuVJ8",
-  "region": "Oise",
-  "type": "page",
-  "kg": "/g/11zyn5kzn0",
-  "cid": "6212780101026936846"
  },
  {
   "name": "Pompair Pompe à chaleur Nanterre & Hauts-de-Seine",
