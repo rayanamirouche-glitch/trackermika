@@ -67,6 +67,13 @@ button{font-family:inherit}
 .panel-head h2{font-size:1rem;font-weight:800}
 .panel-head span.n{font-size:.78rem;color:var(--muted);margin-left:8px;font-weight:600}
 .chartbox{padding:14px 18px 10px}
+.ap-wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 20px}
+.ap-n{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 16px;min-width:150px}
+.ap-n b{display:block;font-weight:800;font-size:1.55rem;line-height:1.05;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.ap-n span{font-size:.74rem;font-weight:600;color:var(--muted)}
+.ap-wrap .btn{margin-left:auto;text-decoration:none}
+#appels,#tableau,#cmds{scroll-margin-top:76px}
+@media(max-width:700px){.ap-wrap{align-items:stretch}.ap-n{flex:1 1 130px;min-width:0}.ap-wrap .btn{margin-left:0;width:100%;justify-content:center;white-space:normal;text-align:center}}
 .cmds{padding:16px 20px}
 .cmds h4{font-size:.62rem;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);margin-bottom:8px;font-weight:800}
 .cmds .c{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:.88rem}
@@ -193,6 +200,7 @@ tr.alert{background:var(--bad-soft)}tr.alert:hover{background:#fbe0e6}
   <nav class="nav">
     <a href="#top" class="on" onclick="navOn(this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Vue d'ensemble</a>
     <a href="#tableau" onclick="navOn(this)"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Toutes les fiches<span class="nb" id="navNb">—</span></a>
+    <a href="#appels" id="navAppels" onclick="navOn(this)" style="display:none"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>Appels reçus</a>
     <a href="#cmds" onclick="navOn(this)"><svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9H7.5L6 6z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>Vos commandes</a>
     <button onclick="ouvrirCommande()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Commander des avis</button>
   </nav>
@@ -226,6 +234,10 @@ tr.alert{background:var(--bad-soft)}tr.alert:hover{background:#fbe0e6}
 <div class="stat"><div class="stat-top"><span class="stat-lbl">Top 3 local</span><span class="stat-ico green"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0V4z"/><path d="M6 6H3v2a3 3 0 0 0 3 3M18 6h3v2a3 3 0 0 1-3 3"/></svg></span></div><div class="stat-val" id="stTop">—</div></div>
 <div class="stat"><div class="stat-top"><span class="stat-lbl">Objectif</span><span class="stat-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg></span></div><div class="stat-val" id="stObj">—</div><div class="objbar"><div class="objfill" id="objFill" style="width:0%"></div></div></div>
 </div>
+<section class="panel" id="appels" style="display:none">
+<div class="panel-head"><h2>Appels reçus<span class="n">plus de 10&nbsp;secondes · vos deux lignes principales</span></h2><span class="n" id="apMaj"></span></div>
+<div class="ap-wrap"><div id="apNums" style="display:contents"></div><a class="btn btn-rank" id="apLien" href="https://appels-mika-abc4bcd7.pages.dev" target="_blank" rel="noopener nofollow">Voir tous les appels, le classement et les pages comptées →</a></div>
+</section>
 <div class="panel" id="cmds" style="display:none"></div>
 <div class="panel"><div class="panel-head"><h2>Évolution du total d'avis</h2><span class="n">toutes les fiches</span></div><div class="chartbox"><canvas id="chart" height="90"></canvas></div></div>
 <section class="panel" id="tableau">
@@ -974,4 +986,33 @@ function sheetTab(t){ document.querySelectorAll('#sheet .tabs button').forEach((
 function ouvrirCommandePour(i){ fermerFiche(); ouvrirCommande(); const s = $('c_f'); if (s) { s.value = String(i); cmdFicheChange(); } }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { fermerFiche(); } });
 
+
+// Appels reçus (16/11/2026) : résumé publié par le site des appels de Mika (mika_site.py, mis à jour toutes les 3 h).
+// Bloc et lien du menu restent masqués si le résumé ne répond pas : rien d'autre sur la page n'en dépend.
+(function () {
+  // Bloc propre à Mika : inactif si cette page est recopiée telle quelle sur le tracker d'un autre client.
+  if (!/(^|--)trackermika\.netlify\.app$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)) return;
+  var SITE = 'https://appels-mika-abc4bcd7.pages.dev';
+  function carte(nb, texte) {
+    var d = document.createElement('div'); d.className = 'ap-n';
+    var b = document.createElement('b'); b.textContent = String(nb);
+    var s = document.createElement('span'); s.textContent = texte;
+    d.appendChild(b); d.appendChild(s); return d;
+  }
+  var ctl = window.AbortController ? new AbortController() : null;
+  if (ctl) setTimeout(function () { ctl.abort(); }, 6000);   // résumé trop lent : on n'insère pas le bloc après coup
+  fetch(SITE + '/resume.json', { cache: 'no-store', signal: ctl ? ctl.signal : undefined }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    var txt = function (v) { return typeof v === 'string' && v !== ''; };
+    if (!d || typeof d.total !== 'number' || !Array.isArray(d.mois) || !txt(d.debut) || !txt(d.maj)) return;
+    var mois = d.mois.slice(0, 2);   // mois en cours + mois précédent : le détail complet est sur le site des appels
+    if (!mois.every(function (m) { return m && typeof m.appels === 'number' && txt(m.nom) && txt(m.duree); })) return;
+    var box = document.getElementById('apNums'); if (!box) return;
+    box.textContent = '';
+    box.appendChild(carte(d.total, 'appels depuis le ' + d.debut));
+    mois.forEach(function (m) { box.appendChild(carte(m.appels, 'en ' + m.nom + (m.en_cours ? ' (en cours)' : '') + ' · ' + m.duree + ' au téléphone')); });
+    document.getElementById('apMaj').textContent = 'dernier appel compté : le ' + d.maj;
+    document.getElementById('appels').style.display = '';
+    var n = document.getElementById('navAppels'); if (n) n.style.display = '';
+  }).catch(function () {});
+})();
 </script></body></html>
